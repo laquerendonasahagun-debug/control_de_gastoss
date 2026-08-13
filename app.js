@@ -134,8 +134,8 @@ function setView(view) {
 function renderSelectors() {
   const currentPeriod = getPeriod();
   setPeriodMenuOpen(false);
-  $('#periodSelectValue').textContent = currentPeriod.name;
-  $('#periodSelectMenu').innerHTML = periods.map(period => `<button type="button" class="custom-option period-option ${period.id === selectedPeriodId ? 'selected' : ''}" role="option" aria-selected="${period.id === selectedPeriodId}" data-period-id="${period.id}"><span><strong>${escapeHtml(period.name)}</strong><small>${escapeHtml(periodRangeLabel(period))}</small></span><span class="period-check">${period.id === selectedPeriodId ? '✓' : ''}</span></button>`).join('');
+  $('#periodSelectValue').textContent = periodRangeLabel(currentPeriod);
+  $('#periodSelectMenu').innerHTML = periods.map(period => `<button type="button" class="custom-option period-option ${period.id === selectedPeriodId ? 'selected' : ''}" role="option" aria-selected="${period.id === selectedPeriodId}" data-period-id="${period.id}"><span><strong>${escapeHtml(periodRangeLabel(period))}</strong></span><span class="period-check">${period.id === selectedPeriodId ? '✓' : ''}</span></button>`).join('');
   setWeekMenuOpen(false);
   const ordered = orderedWeeks(getPeriod());
   const currentWeek = getWeek();
