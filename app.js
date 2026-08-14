@@ -282,7 +282,7 @@ function renderExpenseCategories() {
 
 function renderCapture() {
   renderExpenseCategories();
-  $('#captureBudget').textContent = money(budgetTotal());
+  $('#captureWeeklySpent').textContent = money(selectedTotal());
   const entries = [...manualForSelection()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const count = entries.length;
   $('#newMovementCount').textContent = `${count} ${count === 1 ? 'registro' : 'registros'}`;
@@ -370,7 +370,7 @@ function bindEvents() {
     if (rangeEndDate < rangeStartDate) rangeStartDate = rangeEndDate;
     renderDashboard();
   });
-  $('#captureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); $('#captureBudget').textContent = money(budgetTotal()); });
+  $('#captureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
   $('#expenseCategory').addEventListener('change', syncExpenseTypeFromCategory);
 
   $('#expenseForm').addEventListener('submit', event => {
