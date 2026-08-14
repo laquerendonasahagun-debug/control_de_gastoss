@@ -349,7 +349,6 @@ function renderBudget() {
   const todayBreakdown = snapshotBreakdown(localToday()) || {};
   const operating = budgetItems.filter(item => item.group === 'operating');
   const fixed = budgetItems.filter(item => item.group === 'fixed');
-  $('#monthlyBudgetTotal').textContent = money(monthlyTotal());
   $('#operatingWeekly').textContent = money(budgetTotal('operating'));
   $('#fixedWeekly').textContent = money(budgetTotal('fixed'));
   $('#budgetGrandMonthly').textContent = money(monthlyTotal());
