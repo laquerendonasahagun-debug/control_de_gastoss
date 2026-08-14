@@ -173,7 +173,10 @@ function snapshotBreakdown(date = '') {
 }
 
 function movementRows() {
-  return dateRangeEntries().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  return dateRangeEntries()
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => String(b.row.date).localeCompare(String(a.row.date)) || b.index - a.index)
+    .map(({ row }) => row);
 }
 
 function showToast(message) {
@@ -259,13 +262,13 @@ function renderSpendingPie() {
 }
 
 function renderMovementTable() {
-  const rows = movementRows();
-  $('#movementRows').innerHTML = rows.length ? rows.map(row => movementRowHtml(row, false)).join('') : `<tr><td colspan="5" class="empty-row">No hay movimientos en el rango seleccionado.</td></tr>`;
+  const rows = movementRows().slice(0, 8);
+  $('#movementRows').innerHTML = rows.length ? rows.map(row => movementRowHtml(row, false, true)).join('') : `<tr><td colspan="6" class="empty-row">No hay movimientos en el rango seleccionado.</td></tr>`;
 }
 
-function movementRowHtml(row, includePayment) {
+function movementRowHtml(row, includePayment, includeSpender = includePayment) {
   const item = getItem(row.category);
-  return `<tr><td class="date-cell">${shortDate(row.date)}</td><td><span class="tag">${escapeHtml(item?.name || row.category)}</span></td>${includePayment ? `<td>${escapeHtml(row.spender || '—')}</td><td>${escapeHtml(row.payment || '—')}</td>` : ''}<td class="note-cell">${escapeHtml(row.note || 'Sin nota')}</td><td class="align-right amount-cell">${money(row.amount)}</td><td>${row.source === 'manual' ? `<button class="delete-button" data-delete-id="${row.id}" aria-label="Eliminar gasto">×</button>` : ''}</td></tr>`;
+  return `<tr><td class="date-cell">${shortDate(row.date)}</td><td><span class="tag">${escapeHtml(item?.name || row.category)}</span></td>${includeSpender ? `<td>${escapeHtml(row.spender || '—')}</td>` : ''}${includePayment ? `<td>${escapeHtml(row.payment || '—')}</td>` : ''}<td class="note-cell">${escapeHtml(row.note || 'Sin nota')}</td><td class="align-right amount-cell">${money(row.amount)}</td><td>${row.source === 'manual' ? `<button class="delete-button" data-delete-id="${row.id}" aria-label="Eliminar gasto">×</button>` : ''}</td></tr>`;
 }
 
 function syncExpenseTypeFromCategory() {
