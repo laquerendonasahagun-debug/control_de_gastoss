@@ -1,35 +1,35 @@
 const STORAGE_KEY = 'la-querendona-control-gastos-v1';
 
-const budgetItems = [
-  { id: 'abarrote', name: 'Abarrote', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'verdura', name: 'Verdura / chiles secos / hierbas de olor', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'pan', name: 'Pan', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'basura', name: 'Basura', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'agua', name: 'Agua', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'limpieza', name: 'Producto limpieza y mantelería', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'gas', name: 'Gas', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'carne', name: 'Carne', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'coca-cola', name: 'Coca-Cola', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'jarritos', name: 'Jarritos', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'cortes', name: 'Cortes, snacks', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'cerveza', name: 'Cerveza', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'leche', name: 'Leche', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'pollo', name: 'Pollo', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'bistek', name: 'Bistek', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'cremeria', name: 'Cremería', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'tortillas', name: 'Tortillas y masa', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'mandaditos', name: 'Mandaditos', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'desechable', name: 'Desechable', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'vinos', name: 'Vinos y licores', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'papeleria', name: 'Papelería', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'comision', name: 'Comisión billipocket', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'caja', name: 'Caja', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'otros', name: 'Otros', weekly: 0, monthly: 0, group: 'operating' },
-  { id: 'nomina', name: 'Nómina', weekly: 0, monthly: 0, group: 'fixed' },
-  { id: 'renta', name: 'Renta', weekly: 0, monthly: 0, group: 'fixed' },
-  { id: 'luz', name: 'Luz', weekly: 0, monthly: 0, group: 'fixed' },
-  { id: 'gerencia', name: 'Gerencia', weekly: 0, monthly: 0, group: 'fixed' },
-  { id: 'reserva', name: 'Fondo de reserva', weekly: 0, monthly: 0, group: 'fixed' },
+const expenseItems = [
+  { id: 'abarrote', name: 'Abarrote', group: 'operating' },
+  { id: 'verdura', name: 'Verdura / chiles secos / hierbas de olor', group: 'operating' },
+  { id: 'pan', name: 'Pan', group: 'operating' },
+  { id: 'basura', name: 'Basura', group: 'operating' },
+  { id: 'agua', name: 'Agua', group: 'operating' },
+  { id: 'limpieza', name: 'Producto limpieza y mantelería', group: 'operating' },
+  { id: 'gas', name: 'Gas', group: 'operating' },
+  { id: 'carne', name: 'Carne', group: 'operating' },
+  { id: 'coca-cola', name: 'Coca-Cola', group: 'operating' },
+  { id: 'jarritos', name: 'Jarritos', group: 'operating' },
+  { id: 'cortes', name: 'Cortes, snacks', group: 'operating' },
+  { id: 'cerveza', name: 'Cerveza', group: 'operating' },
+  { id: 'leche', name: 'Leche', group: 'operating' },
+  { id: 'pollo', name: 'Pollo', group: 'operating' },
+  { id: 'bistek', name: 'Bistek', group: 'operating' },
+  { id: 'cremeria', name: 'Cremería', group: 'operating' },
+  { id: 'tortillas', name: 'Tortillas y masa', group: 'operating' },
+  { id: 'mandaditos', name: 'Mandaditos', group: 'operating' },
+  { id: 'desechable', name: 'Desechable', group: 'operating' },
+  { id: 'vinos', name: 'Vinos y licores', group: 'operating' },
+  { id: 'papeleria', name: 'Papelería', group: 'operating' },
+  { id: 'comision', name: 'Comisión billipocket', group: 'operating' },
+  { id: 'caja', name: 'Caja', group: 'operating' },
+  { id: 'otros', name: 'Otros', group: 'operating' },
+  { id: 'nomina', name: 'Nómina', group: 'fixed' },
+  { id: 'renta', name: 'Renta', group: 'fixed' },
+  { id: 'luz', name: 'Luz', group: 'fixed' },
+  { id: 'gerencia', name: 'Gerencia', group: 'fixed' },
+  { id: 'reserva', name: 'Fondo de reserva', group: 'fixed' },
 ];
 
 const spendingPieColors = ['#24584a', '#8cbf8d', '#c17db9', '#83cfc5', '#e4a84c', '#7b8fc5', '#d4776a'];
@@ -37,10 +37,7 @@ const spendingPieColors = ['#24584a', '#8cbf8d', '#c17db9', '#83cfc5', '#e4a84c'
 const periods = (window.EXCEL_PERIODS || []).slice().sort((a, b) => Number(Boolean(b.current)) - Number(Boolean(a.current)) || String(b.weeks.at(-1)?.end || '').localeCompare(String(a.weeks.at(-1)?.end || '')));
 const currentPeriodId = periods.find(period => period.current)?.id || periods[0]?.id || '';
 
-const defaultState = () => ({
-  budgets: Object.fromEntries(budgetItems.map(item => [item.id, { weekly: item.weekly, monthly: item.monthly }])),
-  manualEntries: [],
-});
+const defaultState = () => ({ manualEntries: [] });
 
 const excelEntries = window.EXCEL_ENTRIES || [];
 let state = loadState();
@@ -87,17 +84,18 @@ const periodRangeLabel = period => {
 const orderedWeeks = period => period.weeks.map((week, index) => ({ week, index })).sort((a, b) => {
   return String(b.week.start || '').localeCompare(String(a.week.start || ''));
 });
-const getBudget = id => state.budgets[id] || { weekly: 0, monthly: 0 };
-const getItem = id => budgetItems.find(item => item.id === id);
-const budgetTotal = group => budgetItems.filter(item => !group || item.group === group).reduce((sum, item) => sum + Number(getBudget(item.id).weekly || 0), 0);
-const monthlyTotal = group => budgetItems.filter(item => !group || item.group === group).reduce((sum, item) => sum + Number(getBudget(item.id).monthly || 0), 0);
+const getItem = id => expenseItems.find(item => item.id === id);
 const excelForSelection = () => excelEntries.filter(entry => entry.periodId === selectedPeriodId && Number(entry.weekIndex) === Number(selectedWeekIndex));
 const manualForSelection = () => state.manualEntries.filter(entry => entry.periodId === selectedPeriodId && Number(entry.weekIndex) === Number(selectedWeekIndex));
-const baseTotal = () => {
-  const rows = excelForSelection();
-  return rows.length ? rows.reduce((sum, entry) => sum + Number(entry.amount || 0), 0) : (getWeek().total || 0);
+const weekActualTotal = (periodId, weekIndex, week) => {
+  const excelRows = excelEntries.filter(entry => entry.periodId === periodId && Number(entry.weekIndex) === Number(weekIndex));
+  const importedTotal = excelRows.length ? excelRows.reduce((sum, entry) => sum + Number(entry.amount || 0), 0) : Number(week.total || 0);
+  const capturedTotal = state.manualEntries
+    .filter(entry => entry.periodId === periodId && Number(entry.weekIndex) === Number(weekIndex))
+    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+  return importedTotal + capturedTotal;
 };
-const selectedTotal = () => baseTotal() + manualForSelection().reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+const selectedTotal = () => weekActualTotal(selectedPeriodId, selectedWeekIndex, getWeek());
 const selectedMonthKey = () => String(getWeek().start || localToday()).slice(0, 7);
 const monthYearLabel = monthKey => {
   const label = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(new Date(`${monthKey}-01T12:00:00`));
@@ -117,6 +115,18 @@ function monthlySpentForSelection() {
     return weekTotal + excelTotal + manualTotal;
   }, 0), 0);
 }
+
+function monthlyBreakdownForSelection() {
+  const monthKey = selectedMonthKey();
+  return [...excelEntries, ...state.manualEntries]
+    .filter(entry => String(entry.date || '').startsWith(monthKey))
+    .reduce((breakdown, entry) => {
+      breakdown[entry.category] = (breakdown[entry.category] || 0) + Number(entry.amount || 0);
+      return breakdown;
+    }, {});
+}
+
+const breakdownTotal = (items, breakdown) => items.reduce((sum, item) => sum + Number(breakdown[item.id] || 0), 0);
 
 const entryIsInRange = entry => entry.periodId === selectedPeriodId && entry.date >= rangeStartDate && entry.date <= rangeEndDate;
 const dateRangeEntries = () => [...excelEntries, ...state.manualEntries].filter(entryIsInRange);
@@ -146,9 +156,9 @@ function dateRangeBreakdown() {
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (saved?.budgets && Array.isArray(saved.manualEntries)) {
+    if (Array.isArray(saved?.manualEntries)) {
       let migrated = false;
-      saved.manualEntries = saved.manualEntries.map(entry => {
+      const manualEntries = saved.manualEntries.map(entry => {
         if (periods.some(period => period.id === entry.periodId)) return entry;
         const matchingPeriod = periods.find(period => period.weeks.some(week => entry.date && entry.date >= week.start && entry.date <= week.end));
         const period = matchingPeriod || periods.find(item => item.id === currentPeriodId);
@@ -157,8 +167,9 @@ function loadState() {
         migrated = true;
         return { ...entry, periodId: period.id, weekIndex: matchingWeekIndex >= 0 ? matchingWeekIndex : 0 };
       });
-      if (migrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-      return saved;
+      const nextState = { manualEntries };
+      if (migrated || Object.keys(saved).some(key => key !== 'manualEntries')) localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+      return nextState;
     }
   } catch (error) { console.warn('No se pudo leer la sesión guardada', error); }
   return defaultState();
@@ -194,7 +205,7 @@ function setView(view) {
   $$('.view').forEach(section => section.classList.toggle('active-view', section.id === `${view}View`));
   $$('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.view === view));
   if (view === 'capture') renderCapture();
-  if (view === 'budget') renderBudget();
+  if (view === 'expenses') renderExpenses();
   if (view === 'history') renderHistory();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -220,7 +231,7 @@ function renderSelectors() {
   $('#periodSelectValue').textContent = currentPeriod.name;
   $('#periodSelectMenu').innerHTML = periods.map(period => `<button type="button" class="custom-option period-option ${period.id === selectedPeriodId ? 'selected' : ''}" role="option" aria-selected="${period.id === selectedPeriodId}" data-period-id="${period.id}"><span><strong>${escapeHtml(period.name)}</strong><small>${escapeHtml(periodRangeLabel(period))}</small></span><span class="period-check">${period.id === selectedPeriodId ? '✓' : ''}</span></button>`).join('');
   const ordered = orderedWeeks(getPeriod());
-  const weekOptions = ordered.map(({ week, index }) => `<option value="${index}" ${index === selectedWeekIndex ? 'selected' : ''}>${escapeHtml(week.label)} · ${money(week.total)}</option>`).join('');
+  const weekOptions = ordered.map(({ week, index }) => `<option value="${index}" ${index === selectedWeekIndex ? 'selected' : ''}>${escapeHtml(week.label)} · ${money(weekActualTotal(currentPeriod.id, index, week))}</option>`).join('');
   $('#captureWeek').innerHTML = weekOptions;
   $('#bulkCaptureWeek').innerHTML = weekOptions;
 }
@@ -302,11 +313,11 @@ function syncBulkExpenseTypeFromCategory() {
 function renderExpenseCategories() {
   const selectedCategory = $('#expenseCategory').value;
   const selectedBulkCategory = $('#bulkExpenseCategory').value;
-  const options = budgetItems.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
+  const options = expenseItems.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
   $('#expenseCategory').innerHTML = options;
   $('#bulkExpenseCategory').innerHTML = options;
-  if (budgetItems.some(item => item.id === selectedCategory)) $('#expenseCategory').value = selectedCategory;
-  if (budgetItems.some(item => item.id === selectedBulkCategory)) $('#bulkExpenseCategory').value = selectedBulkCategory;
+  if (expenseItems.some(item => item.id === selectedCategory)) $('#expenseCategory').value = selectedCategory;
+  if (expenseItems.some(item => item.id === selectedBulkCategory)) $('#bulkExpenseCategory').value = selectedBulkCategory;
   syncExpenseTypeFromCategory();
   syncBulkExpenseTypeFromCategory();
 }
@@ -344,39 +355,36 @@ function renderCapture() {
   setCaptureMode(activeCaptureMode);
 }
 
-function renderBudget() {
-  const breakdown = snapshotBreakdown() || {};
+function renderExpenses() {
+  const weeklyBreakdown = snapshotBreakdown() || {};
   const todayBreakdown = snapshotBreakdown(localToday()) || {};
-  const operating = budgetItems.filter(item => item.group === 'operating');
-  const fixed = budgetItems.filter(item => item.group === 'fixed');
-  $('#operatingWeekly').textContent = money(budgetTotal('operating'));
-  $('#fixedWeekly').textContent = money(budgetTotal('fixed'));
-  $('#budgetGrandMonthly').textContent = money(monthlyTotal());
-  $('#operatingBudgetRows').innerHTML = operating.map(item => budgetRowHtml(item, breakdown[item.id] || 0, todayBreakdown[item.id] || 0)).join('');
-  $('#fixedBudgetRows').innerHTML = fixed.map(item => budgetRowHtml(item, breakdown[item.id] || 0, todayBreakdown[item.id] || 0, true)).join('');
-  $('#operatingBudgetTotal').innerHTML = totalRowHtml(budgetTotal('operating'), monthlyTotal('operating'), operating.reduce((sum, item) => sum + (breakdown[item.id] || 0), 0), operating.reduce((sum, item) => sum + (todayBreakdown[item.id] || 0), 0), true);
-  $('#fixedBudgetTotal').innerHTML = totalRowHtml(budgetTotal('fixed'), monthlyTotal('fixed'), fixed.reduce((sum, item) => sum + (breakdown[item.id] || 0), 0), fixed.reduce((sum, item) => sum + (todayBreakdown[item.id] || 0), 0), false);
+  const monthlyBreakdown = monthlyBreakdownForSelection();
+  const operating = expenseItems.filter(item => item.group === 'operating');
+  const fixed = expenseItems.filter(item => item.group === 'fixed');
+  $('#operatingWeekly').textContent = money(breakdownTotal(operating, weeklyBreakdown));
+  $('#fixedWeekly').textContent = money(breakdownTotal(fixed, weeklyBreakdown));
+  $('#expenseGrandMonthly').textContent = money(monthlySpentForSelection());
+  $('#operatingExpenseRows').innerHTML = operating.map(item => expenseRowHtml(item, todayBreakdown, weeklyBreakdown, monthlyBreakdown)).join('');
+  $('#fixedExpenseRows').innerHTML = fixed.map(item => expenseRowHtml(item, todayBreakdown, weeklyBreakdown, monthlyBreakdown)).join('');
+  $('#operatingExpenseTotal').innerHTML = totalRowHtml(breakdownTotal(operating, todayBreakdown), breakdownTotal(operating, weeklyBreakdown), breakdownTotal(operating, monthlyBreakdown));
+  $('#fixedExpenseTotal').innerHTML = totalRowHtml(breakdownTotal(fixed, todayBreakdown), breakdownTotal(fixed, weeklyBreakdown), breakdownTotal(fixed, monthlyBreakdown));
 }
 
-function budgetRowHtml(item, spent, spentToday, fixed = false) {
-  const budget = getBudget(item.id);
-  return `<tr><td><strong>${escapeHtml(item.name)}</strong></td><td class="align-right daily-amount">${money(spentToday)}</td><td class="align-right">${money(budget.weekly)}</td><td class="align-right">${money(budget.monthly)}</td>${fixed ? '' : `<td class="align-right amount-cell">${money(spent)}</td>`}</tr>`;
+function expenseRowHtml(item, todayBreakdown, weeklyBreakdown, monthlyBreakdown) {
+  return `<tr><td><strong>${escapeHtml(item.name)}</strong></td><td class="align-right daily-amount">${money(todayBreakdown[item.id])}</td><td class="align-right amount-cell">${money(weeklyBreakdown[item.id])}</td><td class="align-right">${money(monthlyBreakdown[item.id])}</td></tr>`;
 }
 
-function totalRowHtml(weekly, monthly, spent, spentToday, showSpent) {
-  return `<tr class="total-row"><td>Total</td><td class="align-right">${money(spentToday)}</td><td class="align-right">${money(weekly)}</td><td class="align-right">${money(monthly)}</td>${showSpent ? `<td class="align-right">${money(spent)}</td>` : ''}</tr>`;
+function totalRowHtml(today, weekly, monthly) {
+  return `<tr class="total-row"><td>Total</td><td class="align-right">${money(today)}</td><td class="align-right">${money(weekly)}</td><td class="align-right">${money(monthly)}</td></tr>`;
 }
 
 function renderHistory() {
-  const allWeeks = periods.flatMap(period => period.weeks.map((week, index) => ({ period, week, index, total: period.id === selectedPeriodId && index === selectedWeekIndex ? selectedTotal() : week.total })));
+  const allWeeks = periods.flatMap(period => period.weeks.map((week, index) => ({ period, week, index, total: weekActualTotal(period.id, index, week) })));
   const sortedWeeks = allWeeks.slice().sort((a, b) => String(b.week.start || '').localeCompare(String(a.week.start || '')));
   const chartWeeks = sortedWeeks.filter(item => item.total > 0).slice(0, 18).reverse();
   const max = Math.max(...chartWeeks.map(item => item.total), 1);
   $('#historyChart').innerHTML = chartWeeks.map(item => `<div class="chart-column"><div class="chart-bar-wrap"><div class="chart-bar" style="height:${Math.max(3, item.total / max * 100)}%" data-value="${money(item.total)}"></div></div><span class="chart-label" title="${escapeHtml(item.period.name)} · ${escapeHtml(item.week.label)}">${escapeHtml(item.week.label)}</span></div>`).join('');
-  $('#historyRows').innerHTML = sortedWeeks.map(item => {
-    const budget = budgetTotal(); const difference = budget - item.total; const status = item.total === 0 ? ['Sem dados', 'neutral'] : difference < 0 ? ['Excedido', 'over'] : ['En rango', ''];
-    return `<tr><td><span class="tag">${escapeHtml(item.period.sheet)}</span></td><td>${escapeHtml(item.week.label)}</td><td class="align-right amount-cell">${money(item.total)}</td><td class="align-right">${money(budget)}</td><td class="align-right" style="color:${difference < 0 ? '#a34641' : 'inherit'}">${difference >= 0 ? '+' : ''}${money(difference)}</td><td><span class="status-pill ${status[1]}">${status[0]}</span></td></tr>`;
-  }).join('');
+  $('#historyRows').innerHTML = sortedWeeks.map(item => `<tr><td><span class="tag">${escapeHtml(item.period.sheet)}</span></td><td>${escapeHtml(item.week.label)}</td><td class="align-right amount-cell">${money(item.total)}</td></tr>`).join('');
 }
 
 function setPeriodMenuOpen(isOpen) {
@@ -398,7 +406,7 @@ function bindEvents() {
     const deleteButton = event.target.closest('[data-delete-id]');
     if (deleteButton) {
       state.manualEntries = state.manualEntries.filter(entry => entry.id !== deleteButton.dataset.deleteId);
-      saveState(); renderDashboard(); renderCapture(); renderBudget(); showToast('Gasto eliminado.');
+      saveState(); renderDashboard(); renderCapture(); renderExpenses(); showToast('Gasto eliminado.');
     }
     const deleteBulkButton = event.target.closest('[data-delete-bulk-id]');
     if (deleteBulkButton) {
@@ -526,11 +534,11 @@ function bindEvents() {
     showToast('CSV descargado.'); 
   });
 
-  $('#historyExport').addEventListener('click', () => { const rows = [['Hoja', 'Semana', 'Gasto', 'Presupuesto semanal', 'Variación']]; periods.forEach(period => period.weeks.forEach((week, index) => rows.push([period.sheet, week.label, index === selectedWeekIndex && period.id === selectedPeriodId ? selectedTotal() : week.total, budgetTotal(), budgetTotal() - week.total]))); downloadCsv('historico-control-gastos.csv', rows); showToast('Histórico descargado.'); });
+  $('#historyExport').addEventListener('click', () => { const rows = [['Hoja', 'Semana', 'Gasto']]; periods.forEach(period => period.weeks.forEach((week, index) => rows.push([period.sheet, week.label, weekActualTotal(period.id, index, week)]))); downloadCsv('historico-control-gastos.csv', rows); showToast('Histórico descargado.'); });
   $('#resetData').addEventListener('click', () => { if (!window.confirm('¿Restaurar los datos demo y borrar los gastos capturados?')) return; state = defaultState(); bulkDraftEntries = []; activeCaptureMode = 'single'; saveState(); selectedPeriodId = currentPeriodId; selectedWeekIndex = 0; renderAll(); showToast('Datos demo restaurados.'); });
 }
 
-function renderAll() { renderSelectors(); renderDashboard(); if (activeView === 'capture') renderCapture(); if (activeView === 'budget') renderBudget(); if (activeView === 'history') renderHistory(); }
+function renderAll() { renderSelectors(); renderDashboard(); if (activeView === 'capture') renderCapture(); if (activeView === 'expenses') renderExpenses(); if (activeView === 'history') renderHistory(); }
 
 bindEvents();
 $('#expenseDate').value = localToday();
