@@ -48,6 +48,8 @@ let selectedPeriodId = currentPeriodId;
 let selectedWeekIndex = 0;
 let activeView = 'dashboard';
 let toastTimer;
+let activeCaptureMode = 'single';
+let bulkDraftEntries = [];
 let rangeStartDate = '';
 let rangeEndDate = '';
 
@@ -197,6 +199,21 @@ function setView(view) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function setCaptureMode(mode) {
+  activeCaptureMode = mode === 'bulk' ? 'bulk' : 'single';
+  $$('[data-capture-mode]').forEach(button => {
+    const isActive = button.dataset.captureMode === activeCaptureMode;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-selected', String(isActive));
+  });
+  const singlePanel = $('#singleCapturePanel');
+  const bulkPanel = $('#bulkCapturePanel');
+  singlePanel.classList.toggle('is-active', activeCaptureMode === 'single');
+  singlePanel.hidden = activeCaptureMode !== 'single';
+  bulkPanel.classList.toggle('is-active', activeCaptureMode === 'bulk');
+  bulkPanel.hidden = activeCaptureMode !== 'bulk';
+}
+
 function renderSelectors() {
   const currentPeriod = getPeriod();
   setPeriodMenuOpen(false);
@@ -205,6 +222,7 @@ function renderSelectors() {
   const ordered = orderedWeeks(getPeriod());
   const weekOptions = ordered.map(({ week, index }) => `<option value="${index}" ${index === selectedWeekIndex ? 'selected' : ''}>${escapeHtml(week.label)} · ${money(week.total)}</option>`).join('');
   $('#captureWeek').innerHTML = weekOptions;
+  $('#bulkCaptureWeek').innerHTML = weekOptions;
 }
 
 function renderDashboard() {
@@ -276,11 +294,41 @@ function syncExpenseTypeFromCategory() {
   $('#expenseType').value = selectedItem?.group === 'fixed' ? 'Fijo' : 'Operativo';
 }
 
+function syncBulkExpenseTypeFromCategory() {
+  const selectedItem = getItem($('#bulkExpenseCategory').value);
+  $('#bulkExpenseType').value = selectedItem?.group === 'fixed' ? 'Fijo' : 'Operativo';
+}
+
 function renderExpenseCategories() {
   const selectedCategory = $('#expenseCategory').value;
-  $('#expenseCategory').innerHTML = budgetItems.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
+  const selectedBulkCategory = $('#bulkExpenseCategory').value;
+  const options = budgetItems.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
+  $('#expenseCategory').innerHTML = options;
+  $('#bulkExpenseCategory').innerHTML = options;
   if (budgetItems.some(item => item.id === selectedCategory)) $('#expenseCategory').value = selectedCategory;
+  if (budgetItems.some(item => item.id === selectedBulkCategory)) $('#bulkExpenseCategory').value = selectedBulkCategory;
   syncExpenseTypeFromCategory();
+  syncBulkExpenseTypeFromCategory();
+}
+
+function bulkDraftRowHtml(row) {
+  const item = getItem(row.category);
+  const period = periods.find(candidate => candidate.id === row.periodId);
+  const week = period?.weeks[row.weekIndex];
+  return `<tr><td class="date-cell">${shortDate(row.date)}</td><td>${escapeHtml(week?.label || '—')}</td><td><span class="tag">${escapeHtml(item?.name || row.category)}</span></td><td>${escapeHtml(row.expenseType)}</td><td>${escapeHtml(row.spender)}</td><td>${escapeHtml(row.payment)}</td><td class="note-cell">${escapeHtml(row.note)}</td><td class="align-right amount-cell">${money(row.amount)}</td><td><button class="delete-button" type="button" data-delete-bulk-id="${row.id}" aria-label="Quitar gasto de la lista">×</button></td></tr>`;
+}
+
+function renderBulkDrafts() {
+  const count = bulkDraftEntries.length;
+  const total = bulkDraftEntries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+  $('#bulkTabCount').textContent = count;
+  $('#bulkEntryCount').textContent = `${count} ${count === 1 ? 'gasto' : 'gastos'}`;
+  $('#bulkEntryTotal').textContent = money(total);
+  $('#clearBulkExpenses').disabled = count === 0;
+  $('#saveBulkExpenses').disabled = count === 0;
+  $('#bulkEntryList').innerHTML = count
+    ? `<div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Semana</th><th>Concepto</th><th>Tipo</th><th>Realizó el gasto</th><th>Pago</th><th>Nota</th><th class="align-right">Monto</th><th></th></tr></thead><tbody>${bulkDraftEntries.map(bulkDraftRowHtml).join('')}</tbody></table></div>`
+    : `<div class="bulk-empty-state">Aún no hay gastos en la lista. Completa el formulario y selecciona “Agregar a la lista”.</div>`;
 }
 
 function renderCapture() {
@@ -291,6 +339,9 @@ function renderCapture() {
   $('#newMovementCount').textContent = `${count} ${count === 1 ? 'registro' : 'registros'}`;
   $('#newMovementRows').innerHTML = entries.length ? entries.map(row => movementRowHtml(row, true)).join('') : `<tr><td colspan="7" class="empty-row">Los gastos que guardes para esta semana aparecerán aquí.</td></tr>`;
   if (!$('#expenseDate').value) $('#expenseDate').value = localToday();
+  if (!$('#bulkExpenseDate').value) $('#bulkExpenseDate').value = localToday();
+  renderBulkDrafts();
+  setCaptureMode(activeCaptureMode);
 }
 
 function renderBudget() {
@@ -350,7 +401,14 @@ function bindEvents() {
       state.manualEntries = state.manualEntries.filter(entry => entry.id !== deleteButton.dataset.deleteId);
       saveState(); renderDashboard(); renderCapture(); renderBudget(); showToast('Gasto eliminado.');
     }
+    const deleteBulkButton = event.target.closest('[data-delete-bulk-id]');
+    if (deleteBulkButton) {
+      bulkDraftEntries = bulkDraftEntries.filter(entry => entry.id !== deleteBulkButton.dataset.deleteBulkId);
+      renderBulkDrafts();
+      showToast('Gasto retirado de la lista.');
+    }
   });
+  $$('[data-capture-mode]').forEach(button => button.addEventListener('click', () => setCaptureMode(button.dataset.captureMode)));
   $('#periodSelectButton').addEventListener('click', event => { event.stopPropagation(); setPeriodMenuOpen(!$('#periodSelectControl').classList.contains('open')); });
   $('#periodSelectMenu').addEventListener('click', event => {
     const option = event.target.closest('[data-period-id]');
@@ -375,6 +433,8 @@ function bindEvents() {
   });
   $('#captureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
   $('#expenseCategory').addEventListener('change', syncExpenseTypeFromCategory);
+  $('#bulkCaptureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
+  $('#bulkExpenseCategory').addEventListener('change', syncBulkExpenseTypeFromCategory);
 
   $('#expenseForm').addEventListener('submit', event => {
     event.preventDefault();
@@ -402,6 +462,57 @@ function bindEvents() {
     renderAll(); 
     showToast('Gasto guardado y totales actualizados.'); 
   });
+
+  $('#bulkExpenseForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const amount = Number($('#bulkExpenseAmount').value);
+    if (!amount || amount <= 0) return showToast('Escribe un monto mayor a cero.');
+    const date = $('#bulkExpenseDate').value;
+    const weekIndex = Number($('#bulkCaptureWeek').value);
+    const category = $('#bulkExpenseCategory').value;
+    const spender = $('#bulkExpenseSpender').value.trim();
+    const payment = $('#bulkExpensePayment').value;
+
+    bulkDraftEntries.push({
+      id: `bulk-${Date.now()}-${bulkDraftEntries.length}`,
+      date,
+      category,
+      amount,
+      note: $('#bulkExpenseNote').value.trim() || 'Sin nota',
+      payment,
+      spender,
+      expenseType: getItem(category)?.group === 'fixed' ? 'Fijo' : 'Operativo',
+      periodId: selectedPeriodId,
+      weekIndex,
+      source: 'manual',
+    });
+
+    event.target.reset();
+    $('#bulkExpenseDate').value = date;
+    $('#bulkCaptureWeek').value = String(weekIndex);
+    $('#bulkExpenseSpender').value = spender;
+    $('#bulkExpensePayment').value = payment;
+    renderExpenseCategories();
+    renderBulkDrafts();
+    showToast('Gasto agregado a la lista.');
+  });
+
+  $('#clearBulkExpenses').addEventListener('click', () => {
+    bulkDraftEntries = [];
+    renderBulkDrafts();
+    showToast('Lista de gastos vaciada.');
+  });
+
+  $('#saveBulkExpenses').addEventListener('click', () => {
+    if (!bulkDraftEntries.length) return;
+    const entriesToSave = [...bulkDraftEntries];
+    const idBase = Date.now();
+    state.manualEntries.push(...entriesToSave.map((entry, index) => ({ ...entry, id: `manual-${idBase + index}`, source: 'manual' })));
+    bulkDraftEntries = [];
+    saveState();
+    renderAll();
+    showToast(`${entriesToSave.length} ${entriesToSave.length === 1 ? 'gasto guardado' : 'gastos guardados'} correctamente.`);
+  });
   $('#exportCsv').addEventListener('click', () => { 
     const rows = [['Fecha', 'Concepto', 'Tipo de gasto', 'Quién realizó el gasto', 'Nota', 'Forma de pago', 'Monto']].concat(movementRows().map(row => [
       row.date, 
@@ -417,11 +528,12 @@ function bindEvents() {
   });
 
   $('#historyExport').addEventListener('click', () => { const rows = [['Hoja', 'Semana', 'Gasto', 'Presupuesto semanal', 'Variación']]; periods.forEach(period => period.weeks.forEach((week, index) => rows.push([period.sheet, week.label, index === selectedWeekIndex && period.id === selectedPeriodId ? selectedTotal() : week.total, budgetTotal(), budgetTotal() - week.total]))); downloadCsv('historico-control-gastos.csv', rows); showToast('Histórico descargado.'); });
-  $('#resetData').addEventListener('click', () => { if (!window.confirm('¿Restaurar los datos demo y borrar los gastos capturados?')) return; state = defaultState(); saveState(); selectedPeriodId = currentPeriodId; selectedWeekIndex = 0; renderAll(); showToast('Datos demo restaurados.'); });
+  $('#resetData').addEventListener('click', () => { if (!window.confirm('¿Restaurar los datos demo y borrar los gastos capturados?')) return; state = defaultState(); bulkDraftEntries = []; activeCaptureMode = 'single'; saveState(); selectedPeriodId = currentPeriodId; selectedWeekIndex = 0; renderAll(); showToast('Datos demo restaurados.'); });
 }
 
 function renderAll() { renderSelectors(); renderDashboard(); if (activeView === 'capture') renderCapture(); if (activeView === 'budget') renderBudget(); if (activeView === 'history') renderHistory(); }
 
 bindEvents();
 $('#expenseDate').value = localToday();
+$('#bulkExpenseDate').value = localToday();
 renderAll();

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#173f36" />
     <title>Control de gastos · La Querendona Tepeapulco</title>
-    <link rel="stylesheet" href="styles.css?v=2026-08-14-8" />
+    <link rel="stylesheet" href="styles.css?v=2026-08-14-9" />
   </head>
   <body>
     <div class="app-shell">
@@ -115,38 +115,79 @@
           <div class="page-heading">
             <div><p class="eyebrow">Registro diario</p><h1>Capturar un gasto</h1><p class="muted">Agrega un movimiento y el tablero recalculará la semana automáticamente.</p></div>
           </div>
-          <div class="capture-layout">
-            <article class="panel form-panel">
-              <div class="panel-heading"><div><p class="eyebrow">Nuevo movimiento</p><h3>Datos del gasto</h3></div><span class="required-note">* Campo requerido</span></div>
-              <form id="expenseForm">
-                <div class="form-grid">
-                  <label>Fecha *<input id="expenseDate" type="date" required /></label>
-                  <label>Semana *<select id="captureWeek" required></select></label>
+          <div class="capture-tabs" role="tablist" aria-label="Modo de captura">
+            <button class="capture-tab is-active" id="singleCaptureTab" type="button" role="tab" aria-selected="true" aria-controls="singleCapturePanel" data-capture-mode="single">Gasto individual</button>
+            <button class="capture-tab" id="bulkCaptureTab" type="button" role="tab" aria-selected="false" aria-controls="bulkCapturePanel" data-capture-mode="bulk">Gastos masivos <span id="bulkTabCount">0</span></button>
+          </div>
 
-                  <label>Concepto *<select id="expenseCategory" required></select></label>
+          <div class="capture-tab-panel is-active" id="singleCapturePanel" role="tabpanel" aria-labelledby="singleCaptureTab">
+            <div class="capture-layout">
+              <article class="panel form-panel">
+                <div class="panel-heading"><div><p class="eyebrow">Nuevo movimiento</p><h3>Datos del gasto</h3></div><span class="required-note">* Campo requerido</span></div>
+                <form id="expenseForm">
+                  <div class="form-grid">
+                    <label>Fecha *<input id="expenseDate" type="date" required /></label>
+                    <label>Semana *<select id="captureWeek" required></select></label>
+
+                    <label>Concepto *<select id="expenseCategory" required></select></label>
+                    <label>Tipo de gasto *
+                      <select id="expenseType" required disabled title="Se asigna automáticamente según el concepto seleccionado">
+                        <option value="Operativo">Gasto Operativo</option>
+                        <option value="Fijo">Gasto Fijo</option>
+                      </select>
+                    </label>
+
+                    <label>¿Quién realizó el gasto? *
+                      <input id="expenseSpender" type="text" placeholder="Ej. Cajero, Encargado..." required />
+                    </label>
+                    <label>Forma de pago<select id="expensePayment"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Otro</option></select></label>
+
+                    <label>Monto *<div class="currency-input"><span>$</span><input id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="0.00" required /></div></label>
+                    <label>Nota<input id="expenseNote" type="text" maxlength="80" placeholder="Ej. compra de insumos para el turno" /></label>
+                  </div>
+                  <div class="form-actions"><button type="button" class="ghost-button" data-view="dashboard">Cancelar</button><button class="primary-button" type="submit">Guardar gasto <span>→</span></button></div>
+                </form>
+              </article>
+              <aside class="panel tip-panel">
+                <div class="tip-icon">✦</div>
+                <p class="eyebrow">Tip de control</p><h3>Registra el gasto el mismo día.</h3>
+                <div class="tip-rule"></div><div class="tip-stat"><span>Gasto registrado esta semana</span><strong id="captureWeeklySpent">$0</strong></div>
+              </aside>
+            </div>
+          </div>
+
+          <div class="capture-tab-panel" id="bulkCapturePanel" role="tabpanel" aria-labelledby="bulkCaptureTab" hidden>
+            <article class="panel form-panel bulk-form-panel">
+              <div class="panel-heading"><div><p class="eyebrow">Carga múltiple</p><h3>Preparar varios gastos</h3><p class="bulk-help">Completa un gasto, agrégalo a la lista y guarda todo el lote al finalizar.</p></div><span class="required-note">* Campo requerido</span></div>
+              <form id="bulkExpenseForm">
+                <div class="form-grid bulk-form-grid">
+                  <label>Fecha *<input id="bulkExpenseDate" type="date" required /></label>
+                  <label>Semana *<select id="bulkCaptureWeek" required></select></label>
+                  <label>Concepto *<select id="bulkExpenseCategory" required></select></label>
                   <label>Tipo de gasto *
-                    <select id="expenseType" required disabled title="Se asigna automáticamente según el concepto seleccionado">
+                    <select id="bulkExpenseType" required disabled title="Se asigna automáticamente según el concepto seleccionado">
                       <option value="Operativo">Gasto Operativo</option>
                       <option value="Fijo">Gasto Fijo</option>
                     </select>
                   </label>
-
-                  <label>¿Quién realizó el gasto? *
-                    <input id="expenseSpender" type="text" placeholder="Ej. Cajero, Encargado..." required />
-                  </label>
-                  <label>Forma de pago<select id="expensePayment"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Otro</option></select></label>
-
-                  <label>Monto *<div class="currency-input"><span>$</span><input id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="0.00" required /></div></label>
-                  <label>Nota<input id="expenseNote" type="text" maxlength="80" placeholder="Ej. compra de insumos para el turno" /></label>
+                  <label>¿Quién realizó el gasto? *<input id="bulkExpenseSpender" type="text" placeholder="Ej. Cajero, Encargado..." required /></label>
+                  <label>Forma de pago<select id="bulkExpensePayment"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Otro</option></select></label>
+                  <label>Monto *<div class="currency-input"><span>$</span><input id="bulkExpenseAmount" type="number" min="0.01" step="0.01" placeholder="0.00" required /></div></label>
+                  <label>Nota<input id="bulkExpenseNote" type="text" maxlength="80" placeholder="Ej. compra de insumos para el turno" /></label>
                 </div>
-                <div class="form-actions"><button type="button" class="ghost-button" data-view="dashboard">Cancelar</button><button class="primary-button" type="submit">Guardar gasto <span>→</span></button></div>
+                <div class="bulk-add-action"><button class="ghost-button bulk-add-button" type="submit">＋ Agregar a la lista</button></div>
               </form>
+
+              <div class="bulk-summary-bar" aria-live="polite">
+                <span><strong id="bulkEntryCount">0 gastos</strong> en lista</span>
+                <span>Total: <strong id="bulkEntryTotal">$0.00</strong></span>
+              </div>
+              <div class="bulk-entry-list" id="bulkEntryList"></div>
+              <div class="form-actions bulk-save-actions">
+                <button class="ghost-button" id="clearBulkExpenses" type="button" disabled>Limpiar lista</button>
+                <button class="primary-button" id="saveBulkExpenses" type="button" disabled>Guardar gastos <span>→</span></button>
+              </div>
             </article>
-            <aside class="panel tip-panel">
-              <div class="tip-icon">✦</div>
-              <p class="eyebrow">Tip de control</p><h3>Registra el gasto el mismo día.</h3>
-              <div class="tip-rule"></div><div class="tip-stat"><span>Gasto registrado esta semana</span><strong id="captureWeeklySpent">$0</strong></div>
-            </aside>
           </div>
           <article class="panel table-panel capture-history"><div class="panel-heading"><div><p class="eyebrow">Registros de la semana</p><h3>Movimientos registrados</h3></div><span class="panel-caption" id="newMovementCount">0 registros</span></div><div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Realizó el gasto</th><th>Pago</th><th>Nota</th><th class="align-right">Monto</th><th></th></tr></thead><tbody id="newMovementRows"></tbody></table></div></article>
         </section>
@@ -166,6 +207,6 @@
     </div>
     <script src="period-data.js"></script>
     <script src="excel-data.js"></script>
-    <script src="app.js?v=2026-08-14-16"></script>
+    <script src="app.js?v=2026-08-14-17"></script>
   </body>
 </html>
