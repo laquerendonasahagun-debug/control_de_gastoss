@@ -49,6 +49,7 @@ let databaseReady = false;
 let databaseSyncing = false;
 let activeCaptureMode = 'single';
 let bulkDraftEntries = [];
+let editingExpenseId = '';
 let rangeStartDate = '';
 let rangeEndDate = '';
 
@@ -338,9 +339,48 @@ function renderMovementTable() {
   $('#movementRows').innerHTML = rows.length ? rows.map(row => movementRowHtml(row, false, true)).join('') : `<tr><td colspan="6" class="empty-row">No hay movimientos en el rango seleccionado.</td></tr>`;
 }
 
-function movementRowHtml(row, includePayment, includeSpender = includePayment) {
+function movementRowHtml(row, includePayment, includeSpender = includePayment, allowEdit = false) {
   const item = getItem(row.category);
-  return `<tr><td class="date-cell">${shortDate(row.date)}</td><td><span class="tag">${escapeHtml(item?.name || row.category)}</span></td>${includeSpender ? `<td>${escapeHtml(row.spender || '—')}</td>` : ''}${includePayment ? `<td>${escapeHtml(row.payment || '—')}</td>` : ''}<td class="note-cell">${escapeHtml(row.note || 'Sin nota')}</td><td class="align-right amount-cell">${money(row.amount)}</td><td>${row.source === 'manual' ? `<button class="delete-button" data-delete-id="${row.id}" aria-label="Eliminar gasto">×</button>` : ''}</td></tr>`;
+  const actions = row.source === 'manual'
+    ? `<div class="row-actions">${allowEdit ? `<button class="edit-button" type="button" data-edit-id="${row.id}">Editar</button>` : ''}<button class="delete-button" type="button" data-delete-id="${row.id}" aria-label="Eliminar gasto">×</button></div>`
+    : '';
+  return `<tr><td class="date-cell">${shortDate(row.date)}</td><td><span class="tag">${escapeHtml(item?.name || row.category)}</span></td>${includeSpender ? `<td>${escapeHtml(row.spender || '—')}</td>` : ''}${includePayment ? `<td>${escapeHtml(row.payment || '—')}</td>` : ''}<td class="note-cell">${escapeHtml(row.note || 'Sin nota')}</td><td class="align-right amount-cell">${money(row.amount)}</td><td>${actions}</td></tr>`;
+}
+
+function updateExpenseFormMode() {
+  const isEditing = Boolean(editingExpenseId);
+  $('#expenseFormEyebrow').textContent = isEditing ? 'Editando movimiento' : 'Nuevo movimiento';
+  $('#expenseSubmitLabel').textContent = isEditing ? 'Guardar cambios' : 'Guardar gasto';
+  $('#expenseCancelButton').textContent = isEditing ? 'Cancelar edición' : 'Cancelar';
+}
+
+function resetExpenseForm() {
+  editingExpenseId = '';
+  $('#expenseForm').reset();
+  $('#expenseDate').value = localToday();
+  renderExpenseCategories();
+  updateExpenseFormMode();
+}
+
+function startExpenseEdit(id) {
+  const entry = state.manualEntries.find(candidate => candidate.id === id);
+  if (!entry) return showToast('Este gasto ya no está disponible para editar.');
+  editingExpenseId = id;
+  selectedPeriodId = periods.some(period => period.id === entry.periodId) ? entry.periodId : selectedPeriodId;
+  selectedWeekIndex = Number(entry.weekIndex) || 0;
+  setCaptureMode('single');
+  renderSelectors();
+  renderExpenseCategories();
+  $('#expenseDate').value = entry.date;
+  $('#expenseCategory').value = entry.category;
+  syncExpenseTypeFromCategory();
+  $('#expenseSpender').value = entry.spender || '';
+  $('#expensePayment').value = entry.payment || 'Efectivo';
+  $('#expenseAmount').value = Number(entry.amount);
+  $('#expenseNote').value = entry.note === 'Sin nota' ? '' : entry.note || '';
+  updateExpenseFormMode();
+  $('#expenseForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showToast('Modifica los datos y selecciona “Guardar cambios”.');
 }
 
 function syncExpenseTypeFromCategory() {
@@ -391,7 +431,7 @@ function renderCapture() {
   const entries = [...manualForSelection()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const count = entries.length;
   $('#newMovementCount').textContent = `${count} ${count === 1 ? 'registro' : 'registros'}`;
-  $('#newMovementRows').innerHTML = entries.length ? entries.map(row => movementRowHtml(row, true)).join('') : `<tr><td colspan="7" class="empty-row">Los gastos que guardes para esta semana aparecerán aquí.</td></tr>`;
+  $('#newMovementRows').innerHTML = entries.length ? entries.map(row => movementRowHtml(row, true, true, true)).join('') : `<tr><td colspan="7" class="empty-row">Los gastos que guardes para esta semana aparecerán aquí.</td></tr>`;
   if (!$('#expenseDate').value) $('#expenseDate').value = localToday();
   if (!$('#bulkExpenseDate').value) $('#bulkExpenseDate').value = localToday();
   renderBulkDrafts();
@@ -446,6 +486,8 @@ function bindEvents() {
   document.addEventListener('click', async event => {
     const viewButton = event.target.closest('[data-view]');
     if (viewButton) setView(viewButton.dataset.view);
+    const editButton = event.target.closest('[data-edit-id]');
+    if (editButton) startExpenseEdit(editButton.dataset.editId);
     const deleteButton = event.target.closest('[data-delete-id]');
     if (deleteButton) {
       if (!databaseReady) return showToast('Espera a que la base de datos esté conectada.');
@@ -453,6 +495,7 @@ function bindEvents() {
       try {
         await apiRequest({ method: 'DELETE', body: undefined, id: deleteButton.dataset.deleteId });
         state.manualEntries = state.manualEntries.filter(entry => entry.id !== deleteButton.dataset.deleteId);
+        if (editingExpenseId === deleteButton.dataset.deleteId) resetExpenseForm();
         renderAll();
         showToast('Gasto eliminado de la base de datos.');
       } catch (error) {
@@ -492,6 +535,14 @@ function bindEvents() {
   });
   $('#captureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
   $('#expenseCategory').addEventListener('change', syncExpenseTypeFromCategory);
+  $('#expenseCancelButton').addEventListener('click', () => {
+    if (editingExpenseId) {
+      resetExpenseForm();
+      showToast('Edición cancelada.');
+      return;
+    }
+    setView('dashboard');
+  });
   $('#bulkCaptureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
   $('#bulkExpenseCategory').addEventListener('change', syncBulkExpenseTypeFromCategory);
 
@@ -502,8 +553,9 @@ function bindEvents() {
     if (!amount || amount <= 0) return showToast('Escribe un monto mayor a cero.');
     const category = $('#expenseCategory').value;
     const submitButton = event.submitter;
+    const wasEditing = Boolean(editingExpenseId);
     const newEntry = {
-      id: newExpenseId(),
+      id: editingExpenseId || newExpenseId(),
       date: $('#expenseDate').value, 
       category,
       amount, 
@@ -520,10 +572,9 @@ function bindEvents() {
     try {
       const payload = await apiRequest({ method: 'POST', body: { entry: newEntry } });
       state.manualEntries = payload.entries;
-      event.target.reset();
-      $('#expenseDate').value = localToday();
+      resetExpenseForm();
       renderAll();
-      showToast('Gasto guardado en Neon y totales actualizados.');
+      showToast(wasEditing ? 'Gasto actualizado en Neon.' : 'Gasto guardado en Neon y totales actualizados.');
     } catch (error) {
       showToast(error.message);
     } finally {

@@ -123,7 +123,7 @@
           <div class="capture-tab-panel is-active" id="singleCapturePanel" role="tabpanel" aria-labelledby="singleCaptureTab">
             <div class="capture-layout">
               <article class="panel form-panel">
-                <div class="panel-heading"><div><p class="eyebrow">Nuevo movimiento</p><h3>Datos del gasto</h3></div><span class="required-note">* Campo requerido</span></div>
+                <div class="panel-heading"><div><p class="eyebrow" id="expenseFormEyebrow">Nuevo movimiento</p><h3>Datos del gasto</h3></div><span class="required-note">* Campo requerido</span></div>
                 <form id="expenseForm">
                   <div class="form-grid">
                     <label>Fecha *<input id="expenseDate" type="date" required /></label>
@@ -145,7 +145,7 @@
                     <label>Monto *<div class="currency-input"><span>$</span><input id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="0.00" required /></div></label>
                     <label>Nota<input id="expenseNote" type="text" maxlength="80" placeholder="Ej. compra de insumos para el turno" /></label>
                   </div>
-                  <div class="form-actions"><button type="button" class="ghost-button" data-view="dashboard">Cancelar</button><button class="primary-button" type="submit">Guardar gasto <span>→</span></button></div>
+                  <div class="form-actions"><button type="button" class="ghost-button" id="expenseCancelButton">Cancelar</button><button class="primary-button" id="expenseSubmitButton" type="submit"><span id="expenseSubmitLabel">Guardar gasto</span> <span>→</span></button></div>
                 </form>
               </article>
               <aside class="panel tip-panel">
