@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'la-querendona-control-gastos-v1';
+const EXPENSES_API = '/api/expenses';
 
 const expenseItems = [
   { id: 'abarrote', name: 'Abarrote', group: 'operating' },
@@ -37,14 +38,15 @@ const spendingPieColors = ['#24584a', '#8cbf8d', '#c17db9', '#83cfc5', '#e4a84c'
 const periods = (window.EXCEL_PERIODS || []).slice().sort((a, b) => Number(Boolean(b.current)) - Number(Boolean(a.current)) || String(b.weeks.at(-1)?.end || '').localeCompare(String(a.weeks.at(-1)?.end || '')));
 const currentPeriodId = periods.find(period => period.current)?.id || periods[0]?.id || '';
 
-const defaultState = () => ({ manualEntries: [] });
-
 const excelEntries = window.EXCEL_ENTRIES || [];
-let state = loadState();
+let pendingLegacyEntries = loadLegacyEntries();
+let state = { manualEntries: [...pendingLegacyEntries] };
 let selectedPeriodId = currentPeriodId;
 let selectedWeekIndex = 0;
 let activeView = 'dashboard';
 let toastTimer;
+let databaseReady = false;
+let databaseSyncing = false;
 let activeCaptureMode = 'single';
 let bulkDraftEntries = [];
 let rangeStartDate = '';
@@ -54,6 +56,7 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const money = value => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(Number(value) || 0);
 const compactMoney = value => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', notation: 'compact', maximumFractionDigits: 1 }).format(Number(value) || 0);
+const newExpenseId = () => `manual-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
 const shortDate = value => value ? new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`)).replace('.', '') : '—';
 const localToday = () => {
   const today = new Date();
@@ -153,29 +156,69 @@ function dateRangeBreakdown() {
   }, {});
 }
 
-function loadState() {
+function loadLegacyEntries() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (Array.isArray(saved?.manualEntries)) {
-      let migrated = false;
-      const manualEntries = saved.manualEntries.map(entry => {
+      return saved.manualEntries.map(entry => {
         if (periods.some(period => period.id === entry.periodId)) return entry;
         const matchingPeriod = periods.find(period => period.weeks.some(week => entry.date && entry.date >= week.start && entry.date <= week.end));
         const period = matchingPeriod || periods.find(item => item.id === currentPeriodId);
         if (!period) return entry;
         const matchingWeekIndex = period.weeks.findIndex(week => entry.date && entry.date >= week.start && entry.date <= week.end);
-        migrated = true;
         return { ...entry, periodId: period.id, weekIndex: matchingWeekIndex >= 0 ? matchingWeekIndex : 0 };
       });
-      const nextState = { manualEntries };
-      if (migrated || Object.keys(saved).some(key => key !== 'manualEntries')) localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
-      return nextState;
     }
   } catch (error) { console.warn('No se pudo leer la sesión guardada', error); }
-  return defaultState();
+  return [];
 }
 
-function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+async function apiRequest(options = {}) {
+  const url = options.id ? `${EXPENSES_API}?id=${encodeURIComponent(options.id)}` : EXPENSES_API;
+  const response = await fetch(url, {
+    method: options.method || 'GET',
+    headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+    cache: 'no-store',
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || 'No fue posible conectar con la base de datos.');
+  return payload;
+}
+
+function setDatabaseStatus(status, label) {
+  const statusElement = $('#databaseStatus');
+  const statusDot = $('#databaseStatusDot');
+  if (statusElement) statusElement.textContent = label;
+  if (statusDot) statusDot.dataset.status = status;
+}
+
+async function syncExpenses({ migrateLegacy = true, silent = false } = {}) {
+  if (databaseSyncing) return;
+  databaseSyncing = true;
+  setDatabaseStatus('syncing', 'Sincronizando…');
+
+  try {
+    let payload = await apiRequest();
+    if (migrateLegacy && pendingLegacyEntries.length) {
+      payload = await apiRequest({ method: 'POST', body: { entries: pendingLegacyEntries } });
+      pendingLegacyEntries = [];
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    state.manualEntries = Array.isArray(payload.entries) ? payload.entries : [];
+    databaseReady = true;
+    setDatabaseStatus('online', 'Base de datos conectada');
+    renderAll();
+    if (!silent) showToast('Gastos sincronizados con Neon.');
+  } catch (error) {
+    databaseReady = false;
+    setDatabaseStatus('offline', 'Sin conexión a la base de datos');
+    console.error('No se pudieron sincronizar los gastos:', error);
+    if (!silent) showToast(error.message);
+  } finally {
+    databaseSyncing = false;
+  }
+}
 
 function snapshotBreakdown(date = '') {
   const rows = [...excelForSelection(), ...manualForSelection()].filter(entry => !date || entry.date === date);
@@ -400,13 +443,22 @@ function downloadCsv(filename, rows) {
 }
 
 function bindEvents() {
-  document.addEventListener('click', event => {
+  document.addEventListener('click', async event => {
     const viewButton = event.target.closest('[data-view]');
     if (viewButton) setView(viewButton.dataset.view);
     const deleteButton = event.target.closest('[data-delete-id]');
     if (deleteButton) {
-      state.manualEntries = state.manualEntries.filter(entry => entry.id !== deleteButton.dataset.deleteId);
-      saveState(); renderDashboard(); renderCapture(); renderExpenses(); showToast('Gasto eliminado.');
+      if (!databaseReady) return showToast('Espera a que la base de datos esté conectada.');
+      deleteButton.disabled = true;
+      try {
+        await apiRequest({ method: 'DELETE', body: undefined, id: deleteButton.dataset.deleteId });
+        state.manualEntries = state.manualEntries.filter(entry => entry.id !== deleteButton.dataset.deleteId);
+        renderAll();
+        showToast('Gasto eliminado de la base de datos.');
+      } catch (error) {
+        deleteButton.disabled = false;
+        showToast(error.message);
+      }
     }
     const deleteBulkButton = event.target.closest('[data-delete-bulk-id]');
     if (deleteBulkButton) {
@@ -443,14 +495,15 @@ function bindEvents() {
   $('#bulkCaptureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
   $('#bulkExpenseCategory').addEventListener('change', syncBulkExpenseTypeFromCategory);
 
-  $('#expenseForm').addEventListener('submit', event => {
+  $('#expenseForm').addEventListener('submit', async event => {
     event.preventDefault();
+    if (!databaseReady) return showToast('Espera a que la base de datos esté conectada.');
     const amount = Number($('#expenseAmount').value);
     if (!amount || amount <= 0) return showToast('Escribe un monto mayor a cero.');
     const category = $('#expenseCategory').value;
-    
-    state.manualEntries.push({ 
-      id: `manual-${Date.now()}`, 
+    const submitButton = event.submitter;
+    const newEntry = {
+      id: newExpenseId(),
       date: $('#expenseDate').value, 
       category,
       amount, 
@@ -461,13 +514,21 @@ function bindEvents() {
       periodId: selectedPeriodId, 
       weekIndex: selectedWeekIndex, 
       source: 'manual' 
-    });
-    
-    saveState(); 
-    event.target.reset(); 
-    $('#expenseDate').value = localToday();
-    renderAll(); 
-    showToast('Gasto guardado y totales actualizados.'); 
+    };
+
+    if (submitButton) submitButton.disabled = true;
+    try {
+      const payload = await apiRequest({ method: 'POST', body: { entry: newEntry } });
+      state.manualEntries = payload.entries;
+      event.target.reset();
+      $('#expenseDate').value = localToday();
+      renderAll();
+      showToast('Gasto guardado en Neon y totales actualizados.');
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
   });
 
   $('#bulkExpenseForm').addEventListener('submit', event => {
@@ -510,15 +571,22 @@ function bindEvents() {
     showToast('Lista de gastos vaciada.');
   });
 
-  $('#saveBulkExpenses').addEventListener('click', () => {
+  $('#saveBulkExpenses').addEventListener('click', async event => {
     if (!bulkDraftEntries.length) return;
-    const entriesToSave = [...bulkDraftEntries];
-    const idBase = Date.now();
-    state.manualEntries.push(...entriesToSave.map((entry, index) => ({ ...entry, id: `manual-${idBase + index}`, source: 'manual' })));
-    bulkDraftEntries = [];
-    saveState();
-    renderAll();
-    showToast(`${entriesToSave.length} ${entriesToSave.length === 1 ? 'gasto guardado' : 'gastos guardados'} correctamente.`);
+    if (!databaseReady) return showToast('Espera a que la base de datos esté conectada.');
+    const entriesToSave = bulkDraftEntries.map(entry => ({ ...entry, id: newExpenseId(), source: 'manual' }));
+    event.currentTarget.disabled = true;
+    try {
+      const payload = await apiRequest({ method: 'POST', body: { entries: entriesToSave } });
+      state.manualEntries = payload.entries;
+      bulkDraftEntries = [];
+      renderAll();
+      showToast(`${entriesToSave.length} ${entriesToSave.length === 1 ? 'gasto guardado' : 'gastos guardados'} en Neon.`);
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      event.currentTarget.disabled = bulkDraftEntries.length === 0;
+    }
   });
   $('#exportCsv').addEventListener('click', () => { 
     const rows = [['Fecha', 'Concepto', 'Tipo de gasto', 'Quién realizó el gasto', 'Nota', 'Forma de pago', 'Monto']].concat(movementRows().map(row => [
@@ -535,7 +603,7 @@ function bindEvents() {
   });
 
   $('#historyExport').addEventListener('click', () => { const rows = [['Hoja', 'Semana', 'Gasto']]; periods.forEach(period => period.weeks.forEach((week, index) => rows.push([period.sheet, week.label, weekActualTotal(period.id, index, week)]))); downloadCsv('historico-control-gastos.csv', rows); showToast('Histórico descargado.'); });
-  $('#resetData').addEventListener('click', () => { if (!window.confirm('¿Restaurar los datos demo y borrar los gastos capturados?')) return; state = defaultState(); bulkDraftEntries = []; activeCaptureMode = 'single'; saveState(); selectedPeriodId = currentPeriodId; selectedWeekIndex = 0; renderAll(); showToast('Datos demo restaurados.'); });
+  $('#refreshData').addEventListener('click', () => syncExpenses({ migrateLegacy: true }));
 }
 
 function renderAll() { renderSelectors(); renderDashboard(); if (activeView === 'capture') renderCapture(); if (activeView === 'expenses') renderExpenses(); if (activeView === 'history') renderHistory(); }
@@ -544,3 +612,11 @@ bindEvents();
 $('#expenseDate').value = localToday();
 $('#bulkExpenseDate').value = localToday();
 renderAll();
+syncExpenses({ migrateLegacy: true });
+window.addEventListener('focus', () => syncExpenses({ migrateLegacy: false, silent: true }));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') syncExpenses({ migrateLegacy: false, silent: true });
+});
+window.setInterval(() => {
+  if (document.visibilityState === 'visible') syncExpenses({ migrateLegacy: false, silent: true });
+}, 30000);

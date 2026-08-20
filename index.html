@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#173f36" />
     <title>Control de gastos · La Querendona Tepeapulco</title>
-    <link rel="stylesheet" href="styles.css?v=2026-08-14-10" />
+    <link rel="stylesheet" href="styles.css?v=2026-08-20-1" />
   </head>
   <body>
     <div class="app-shell">
@@ -28,13 +28,13 @@
 
         <div class="sidebar-footer">
           <div class="store-card">
-            <span class="store-dot"></span>
+            <span class="store-dot" id="databaseStatusDot" data-status="syncing"></span>
             <div>
               <strong>Tepeapulco</strong>
-              <span>Operación activa</span>
+              <span id="databaseStatus">Sincronizando…</span>
             </div>
           </div>
-          <button class="reset-link" id="resetData">Restaurar datos demo</button>
+          <button class="reset-link" id="refreshData">Actualizar datos</button>
         </div>
       </aside>
 
@@ -207,6 +207,6 @@
     </div>
     <script src="period-data.js"></script>
     <script src="excel-data.js"></script>
-    <script src="app.js?v=2026-08-14-19"></script>
+    <script src="app.js?v=2026-08-20-1"></script>
   </body>
 </html>

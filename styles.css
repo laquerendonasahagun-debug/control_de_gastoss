@@ -38,6 +38,8 @@ button { cursor: pointer; }
 .sidebar-footer { margin-top: auto; padding: 19px 9px 0; border-top: 1px solid rgba(255,255,255,.12); }
 .store-card { display: flex; align-items: center; gap: 10px; }
 .store-dot { width: 9px; height: 9px; border-radius: 50%; background: #94da82; box-shadow: 0 0 0 4px rgba(148,218,130,.14); }
+.store-dot[data-status="syncing"] { background: #efc56f; box-shadow: 0 0 0 4px rgba(239,197,111,.14); }
+.store-dot[data-status="offline"] { background: #db857e; box-shadow: 0 0 0 4px rgba(219,133,126,.14); }
 .store-card strong { display: block; font-size: 12px; }
 .store-card span { display: block; color: #83aa9c; font-size: 10px; margin-top: 3px; }
 .reset-link { border: 0; padding: 0; margin-top: 20px; background: transparent; color: #83aa9c; font-size: 11px; text-decoration: underline; }
