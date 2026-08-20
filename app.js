@@ -347,40 +347,39 @@ function movementRowHtml(row, includePayment, includeSpender = includePayment, a
   return `<tr><td class="date-cell">${shortDate(row.date)}</td><td><span class="tag">${escapeHtml(item?.name || row.category)}</span></td>${includeSpender ? `<td>${escapeHtml(row.spender || '—')}</td>` : ''}${includePayment ? `<td>${escapeHtml(row.payment || '—')}</td>` : ''}<td class="note-cell">${escapeHtml(row.note || 'Sin nota')}</td><td class="align-right amount-cell">${money(row.amount)}</td><td>${actions}</td></tr>`;
 }
 
-function updateExpenseFormMode() {
-  const isEditing = Boolean(editingExpenseId);
-  $('#expenseFormEyebrow').textContent = isEditing ? 'Editando movimiento' : 'Nuevo movimiento';
-  $('#expenseSubmitLabel').textContent = isEditing ? 'Guardar cambios' : 'Guardar gasto';
-  $('#expenseCancelButton').textContent = isEditing ? 'Cancelar edición' : 'Cancelar';
-}
-
 function resetExpenseForm() {
-  editingExpenseId = '';
   $('#expenseForm').reset();
   $('#expenseDate').value = localToday();
   renderExpenseCategories();
-  updateExpenseFormMode();
+}
+
+function closeExpenseEdit() {
+  editingExpenseId = '';
+  if ($('#editExpenseDialog').open) $('#editExpenseDialog').close();
+}
+
+function syncEditExpenseTypeFromCategory() {
+  const selectedItem = getItem($('#editExpenseCategory').value);
+  $('#editExpenseType').value = selectedItem?.group === 'fixed' ? 'Fijo' : 'Operativo';
 }
 
 function startExpenseEdit(id) {
   const entry = state.manualEntries.find(candidate => candidate.id === id);
   if (!entry) return showToast('Este gasto ya no está disponible para editar.');
   editingExpenseId = id;
-  selectedPeriodId = periods.some(period => period.id === entry.periodId) ? entry.periodId : selectedPeriodId;
-  selectedWeekIndex = Number(entry.weekIndex) || 0;
-  setCaptureMode('single');
-  renderSelectors();
-  renderExpenseCategories();
-  $('#expenseDate').value = entry.date;
-  $('#expenseCategory').value = entry.category;
-  syncExpenseTypeFromCategory();
-  $('#expenseSpender').value = entry.spender || '';
-  $('#expensePayment').value = entry.payment || 'Efectivo';
-  $('#expenseAmount').value = Number(entry.amount);
-  $('#expenseNote').value = entry.note === 'Sin nota' ? '' : entry.note || '';
-  updateExpenseFormMode();
-  $('#expenseForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  showToast('Modifica los datos y selecciona “Guardar cambios”.');
+  const period = periods.find(candidate => candidate.id === entry.periodId) || getPeriod();
+  $('#editExpenseSubtitle').textContent = `${shortDate(entry.date)} · ${getItem(entry.category)?.name || entry.category}`;
+  $('#editExpenseWeek').innerHTML = period.weeks.map((week, index) => `<option value="${index}">${escapeHtml(week.label)}</option>`).join('');
+  $('#editExpenseCategory').innerHTML = expenseItems.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
+  $('#editExpenseDate').value = entry.date;
+  $('#editExpenseWeek').value = Number(entry.weekIndex) || 0;
+  $('#editExpenseCategory').value = entry.category;
+  syncEditExpenseTypeFromCategory();
+  $('#editExpenseSpender').value = entry.spender || '';
+  $('#editExpensePayment').value = entry.payment || 'Efectivo';
+  $('#editExpenseAmount').value = Number(entry.amount);
+  $('#editExpenseNote').value = entry.note === 'Sin nota' ? '' : entry.note || '';
+  $('#editExpenseDialog').showModal();
 }
 
 function syncExpenseTypeFromCategory() {
@@ -495,7 +494,7 @@ function bindEvents() {
       try {
         await apiRequest({ method: 'DELETE', body: undefined, id: deleteButton.dataset.deleteId });
         state.manualEntries = state.manualEntries.filter(entry => entry.id !== deleteButton.dataset.deleteId);
-        if (editingExpenseId === deleteButton.dataset.deleteId) resetExpenseForm();
+        if (editingExpenseId === deleteButton.dataset.deleteId) closeExpenseEdit();
         renderAll();
         showToast('Gasto eliminado de la base de datos.');
       } catch (error) {
@@ -535,14 +534,12 @@ function bindEvents() {
   });
   $('#captureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
   $('#expenseCategory').addEventListener('change', syncExpenseTypeFromCategory);
-  $('#expenseCancelButton').addEventListener('click', () => {
-    if (editingExpenseId) {
-      resetExpenseForm();
-      showToast('Edición cancelada.');
-      return;
-    }
-    setView('dashboard');
-  });
+  $('#expenseCancelButton').addEventListener('click', () => setView('dashboard'));
+  $('#editExpenseCategory').addEventListener('change', syncEditExpenseTypeFromCategory);
+  $('#closeEditExpense').addEventListener('click', closeExpenseEdit);
+  $('#cancelEditExpense').addEventListener('click', closeExpenseEdit);
+  $('#editExpenseDialog').addEventListener('click', event => { if (event.target === event.currentTarget) closeExpenseEdit(); });
+  $('#editExpenseDialog').addEventListener('close', () => { editingExpenseId = ''; });
   $('#bulkCaptureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
   $('#bulkExpenseCategory').addEventListener('change', syncBulkExpenseTypeFromCategory);
 
@@ -553,9 +550,8 @@ function bindEvents() {
     if (!amount || amount <= 0) return showToast('Escribe un monto mayor a cero.');
     const category = $('#expenseCategory').value;
     const submitButton = event.submitter;
-    const wasEditing = Boolean(editingExpenseId);
     const newEntry = {
-      id: editingExpenseId || newExpenseId(),
+      id: newExpenseId(),
       date: $('#expenseDate').value, 
       category,
       amount, 
@@ -574,7 +570,42 @@ function bindEvents() {
       state.manualEntries = payload.entries;
       resetExpenseForm();
       renderAll();
-      showToast(wasEditing ? 'Gasto actualizado en Neon.' : 'Gasto guardado en Neon y totales actualizados.');
+      showToast('Gasto guardado en Neon y totales actualizados.');
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  });
+
+  $('#editExpenseForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!databaseReady) return showToast('Espera a que la base de datos esté conectada.');
+    const currentEntry = state.manualEntries.find(entry => entry.id === editingExpenseId);
+    if (!currentEntry) return closeExpenseEdit();
+    const amount = Number($('#editExpenseAmount').value);
+    if (!amount || amount <= 0) return showToast('Escribe un monto mayor a cero.');
+    const category = $('#editExpenseCategory').value;
+    const submitButton = event.submitter;
+    const updatedEntry = {
+      ...currentEntry,
+      date: $('#editExpenseDate').value,
+      weekIndex: Number($('#editExpenseWeek').value),
+      category,
+      amount,
+      note: $('#editExpenseNote').value.trim() || 'Sin nota',
+      payment: $('#editExpensePayment').value,
+      spender: $('#editExpenseSpender').value.trim(),
+      expenseType: getItem(category)?.group === 'fixed' ? 'Fijo' : 'Operativo',
+      source: 'manual'
+    };
+    if (submitButton) submitButton.disabled = true;
+    try {
+      const payload = await apiRequest({ method: 'POST', body: { entry: updatedEntry } });
+      state.manualEntries = payload.entries;
+      closeExpenseEdit();
+      renderAll();
+      showToast('Gasto actualizado en Neon.');
     } catch (error) {
       showToast(error.message);
     } finally {
