@@ -23,7 +23,6 @@
           <button class="nav-item active" data-view="dashboard"><span class="nav-icon">⌂</span>Resumen</button>
           <button class="nav-item" data-view="capture"><span class="nav-icon">＋</span>Capturar gasto</button>
           <button class="nav-item" data-view="expenses"><span class="nav-icon">▤</span>Registro de gastos</button>
-          <button class="nav-item" data-view="history"><span class="nav-icon">◷</span>Histórico</button>
         </nav>
 
         <div class="sidebar-footer">
@@ -214,11 +213,6 @@
           <div class="content-grid expense-columns"><article class="panel table-panel"><div class="panel-heading"><div><p class="eyebrow">Gastos operativos</p><h3>Gastos por concepto</h3></div></div><div class="table-scroll"><table><thead><tr><th>Concepto</th><th class="align-right">Día (hoy)</th><th class="align-right">Semanal</th><th class="align-right">Mensual</th></tr></thead><tbody id="operatingExpenseRows"></tbody><tfoot id="operatingExpenseTotal"></tfoot></table></div></article><article class="panel table-panel fixed-expense-panel"><div class="panel-heading"><div><p class="eyebrow">Gastos fijos</p><h3>Gastos por concepto</h3></div></div><div class="table-scroll"><table><thead><tr><th>Concepto</th><th class="align-right">Día (hoy)</th><th class="align-right">Semanal</th><th class="align-right">Mensual</th></tr></thead><tbody id="fixedExpenseRows"></tbody><tfoot id="fixedExpenseTotal"></tfoot></table></div></article></div>
         </section>
 
-        <section id="historyView" class="view">
-          <div class="page-heading"><div><p class="eyebrow">Seguimiento histórico</p><h1>Histórico semanal</h1><p class="muted">Consulta los totales semanales tomados de las hojas del control de gastos.</p></div><button class="ghost-button" id="historyExport">↓ Descargar histórico</button></div>
-          <article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">Tendencia</p><h3>Gasto por semana</h3></div><span class="panel-caption">Últimas semanas con movimiento</span></div><div id="historyChart" class="history-chart"></div></article>
-          <article class="panel table-panel"><div class="panel-heading"><div><p class="eyebrow">Archivo Excel</p><h3>Periodos registrados</h3></div></div><div class="table-scroll"><table><thead><tr><th>Hoja</th><th>Semana</th><th class="align-right">Gasto</th></tr></thead><tbody id="historyRows"></tbody></table></div></article>
-        </section>
       </main>
     </div>
     <dialog class="expense-edit-dialog" id="editExpenseDialog" aria-labelledby="editExpenseTitle">
@@ -242,6 +236,6 @@
     </dialog>
     <script src="period-data.js"></script>
     <script src="excel-data.js"></script>
-    <script src="app.js?v=2026-08-21-3"></script>
+    <script src="app.js?v=2026-08-21-4"></script>
   </body>
 </html>
