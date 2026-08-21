@@ -153,7 +153,7 @@
                     </label>
 
                     <label>¿Quién realizó el gasto? *
-                      <input id="expenseSpender" type="text" placeholder="Ej. Cajero, Encargado..." required />
+                      <select id="expenseSpender" required><option value="" disabled selected>Selecciona una persona</option><option>Alejandra</option><option>Horacio</option><option>Diego</option><option>Haytham</option><option>Mary</option></select>
                     </label>
                     <label>Forma de pago<select id="expensePayment"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Otro</option></select></label>
 
@@ -185,7 +185,7 @@
                       <option value="Fijo">Gasto Fijo</option>
                     </select>
                   </label>
-                  <label>¿Quién realizó el gasto? *<input id="bulkExpenseSpender" type="text" placeholder="Ej. Cajero, Encargado..." required /></label>
+                  <label>¿Quién realizó el gasto? *<select id="bulkExpenseSpender" required><option value="" disabled selected>Selecciona una persona</option><option>Alejandra</option><option>Horacio</option><option>Diego</option><option>Haytham</option><option>Mary</option></select></label>
                   <label>Forma de pago<select id="bulkExpensePayment"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Otro</option></select></label>
                   <label>Monto *<div class="currency-input"><span>$</span><input id="bulkExpenseAmount" type="number" min="0.01" step="0.01" placeholder="0.00" required /></div></label>
                   <label>Nota<input id="bulkExpenseNote" type="text" maxlength="80" placeholder="Ej. compra de insumos para el turno" /></label>
@@ -226,7 +226,7 @@
           <label>Semana *<select id="editExpenseWeek" required></select></label>
           <label>Concepto *<select id="editExpenseCategory" required></select></label>
           <label>Tipo de gasto *<select id="editExpenseType" required disabled><option value="Operativo">Gasto Operativo</option><option value="Fijo">Gasto Fijo</option></select></label>
-          <label>¿Quién realizó el gasto? *<input id="editExpenseSpender" type="text" required /></label>
+          <label>¿Quién realizó el gasto? *<select id="editExpenseSpender" required><option value="" disabled>Selecciona una persona</option><option>Alejandra</option><option>Horacio</option><option>Diego</option><option>Haytham</option><option>Mary</option></select></label>
           <label>Forma de pago<select id="editExpensePayment"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Otro</option></select></label>
           <label>Monto *<div class="currency-input"><span>$</span><input id="editExpenseAmount" type="number" min="0.01" step="0.01" required /></div></label>
           <label>Nota<input id="editExpenseNote" type="text" maxlength="80" placeholder="Ej. compra de insumos para el turno" /></label>
@@ -236,6 +236,6 @@
     </dialog>
     <script src="period-data.js"></script>
     <script src="excel-data.js"></script>
-    <script src="app.js?v=2026-08-21-5"></script>
+    <script src="app.js?v=2026-08-21-6"></script>
   </body>
 </html>
