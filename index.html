@@ -65,10 +65,21 @@
               <h1>Resumen de gastos</h1>
               <p class="muted" id="dashboardSubtitle">Visualiza el gasto de tu operación por semana y concepto.</p>
             </div>
-            <div class="date-range-picker" aria-label="Rango visible">
-              <span class="date-range-title">Rango visible</span>
-              <label>Desde<input id="rangeStartDate" type="date" /></label>
-              <label>Hasta<input id="rangeEndDate" type="date" /></label>
+            <div class="date-filter" aria-label="Filtro de fecha">
+              <div class="date-filter-heading">
+                <span class="date-range-title">Filtrar por</span>
+                <div class="date-filter-tabs" role="tablist" aria-label="Tipo de filtro de fecha">
+                  <button class="date-filter-tab" type="button" role="tab" data-date-filter="day" aria-selected="false">Día</button>
+                  <button class="date-filter-tab" type="button" role="tab" data-date-filter="week" aria-selected="false">Semana</button>
+                  <button class="date-filter-tab is-active" type="button" role="tab" data-date-filter="month" aria-selected="true">Mes</button>
+                </div>
+              </div>
+              <div class="date-filter-body">
+                <label class="date-filter-control" data-date-control="day" hidden>Selecciona el día<input id="dayFilterDate" type="date" /></label>
+                <label class="date-filter-control" data-date-control="week" hidden>Selecciona la semana<input id="weekFilterWeek" type="week" /></label>
+                <label class="date-filter-control" data-date-control="month">Selecciona el mes<input id="monthFilterMonth" type="month" /></label>
+                <span class="date-filter-range" id="dateFilterRange"></span>
+              </div>
             </div>
           </div>
 
@@ -231,6 +242,6 @@
     </dialog>
     <script src="period-data.js"></script>
     <script src="excel-data.js"></script>
-    <script src="app.js?v=2026-08-21-1"></script>
+    <script src="app.js?v=2026-08-21-2"></script>
   </body>
 </html>
