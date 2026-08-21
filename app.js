@@ -32,6 +32,7 @@ const expenseItems = [
   { id: 'gerencia', name: 'Gerencia', group: 'fixed' },
   { id: 'reserva', name: 'Fondo de reserva', group: 'fixed' },
 ];
+const expenseSpenders = ['Alejandra', 'Horacio', 'Diego', 'Haytham', 'Mary'];
 
 const spendingPieColors = ['#24584a', '#8cbf8d', '#c17db9', '#83cfc5', '#e4a84c', '#7b8fc5', '#d4776a'];
 
@@ -436,6 +437,13 @@ function syncEditExpenseTypeFromCategory() {
   $('#editExpenseType').value = selectedItem?.group === 'fixed' ? 'Fijo' : 'Operativo';
 }
 
+function setEditExpenseSpender(spender) {
+  const selectedSpender = String(spender || '').trim();
+  const choices = selectedSpender && !expenseSpenders.includes(selectedSpender) ? [...expenseSpenders, selectedSpender] : expenseSpenders;
+  $('#editExpenseSpender').innerHTML = `<option value="" disabled>Selecciona una persona</option>${choices.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}${!expenseSpenders.includes(name) ? ' (registro anterior)' : ''}</option>`).join('')}`;
+  $('#editExpenseSpender').value = selectedSpender;
+}
+
 function startExpenseEdit(id) {
   const entry = state.manualEntries.find(candidate => candidate.id === id);
   if (!entry) return showToast('Este gasto ya no está disponible para editar.');
@@ -448,7 +456,7 @@ function startExpenseEdit(id) {
   $('#editExpenseWeek').value = Number(entry.weekIndex) || 0;
   $('#editExpenseCategory').value = entry.category;
   syncEditExpenseTypeFromCategory();
-  $('#editExpenseSpender').value = entry.spender || '';
+  setEditExpenseSpender(entry.spender);
   $('#editExpensePayment').value = entry.payment || 'Efectivo';
   $('#editExpenseAmount').value = Number(entry.amount);
   $('#editExpenseNote').value = entry.note === 'Sin nota' ? '' : entry.note || '';
