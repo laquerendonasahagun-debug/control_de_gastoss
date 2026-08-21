@@ -52,6 +52,10 @@ let bulkDraftEntries = [];
 let editingExpenseId = '';
 let rangeStartDate = '';
 let rangeEndDate = '';
+let activeDateFilter = 'month';
+let selectedFilterDay = '';
+let selectedFilterWeek = '';
+let selectedFilterMonth = '';
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
@@ -66,8 +70,40 @@ const localToday = () => {
   const day = String(today.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
-rangeEndDate = localToday();
-rangeStartDate = `${rangeEndDate.slice(0, 7)}-01`;
+const dateToIsoWeek = value => {
+  const source = new Date(`${value}T12:00:00`);
+  const date = new Date(Date.UTC(source.getFullYear(), source.getMonth(), source.getDate()));
+  const dayNumber = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNumber);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNumber = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
+};
+const isoWeekRange = value => {
+  const match = /^(\d{4})-W(\d{2})$/.exec(value || '');
+  if (!match) return { start: localToday(), end: localToday() };
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  const januaryFourth = new Date(Date.UTC(year, 0, 4));
+  const januaryFourthDay = januaryFourth.getUTCDay() || 7;
+  const monday = new Date(januaryFourth);
+  monday.setUTCDate(januaryFourth.getUTCDate() - januaryFourthDay + 1 + ((week - 1) * 7));
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const format = date => date.toISOString().slice(0, 10);
+  return { start: format(monday), end: format(sunday) };
+};
+const monthRange = value => {
+  const monthKey = /^\d{4}-\d{2}$/.test(value || '') ? value : localToday().slice(0, 7);
+  const [year, month] = monthKey.split('-').map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  const endOfMonth = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
+  return { start: `${monthKey}-01`, end: monthKey === localToday().slice(0, 7) ? localToday() : endOfMonth };
+};
+selectedFilterDay = localToday();
+selectedFilterWeek = dateToIsoWeek(localToday());
+selectedFilterMonth = localToday().slice(0, 7);
+({ start: rangeStartDate, end: rangeEndDate } = monthRange(selectedFilterMonth));
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 const getPeriod = () => periods.find(period => period.id === selectedPeriodId) || periods[0];
 const getWeek = () => getPeriod().weeks[selectedWeekIndex] || getPeriod().weeks[0];
@@ -138,6 +174,30 @@ const breakdownTotal = (items, breakdown) => items.reduce((sum, item) => sum + N
 const entryIsInRange = entry => entry.periodId === selectedPeriodId && entry.date >= rangeStartDate && entry.date <= rangeEndDate;
 const dateRangeEntries = () => [...excelEntries, ...state.manualEntries].filter(entryIsInRange);
 const dateRangeLabel = () => rangeStartDate === rangeEndDate ? shortDate(rangeStartDate) : `${shortDate(rangeStartDate)} – ${shortDate(rangeEndDate)}`;
+
+function applyDateFilter() {
+  if (activeDateFilter === 'day') {
+    rangeStartDate = selectedFilterDay;
+    rangeEndDate = selectedFilterDay;
+  } else if (activeDateFilter === 'week') {
+    ({ start: rangeStartDate, end: rangeEndDate } = isoWeekRange(selectedFilterWeek));
+  } else {
+    ({ start: rangeStartDate, end: rangeEndDate } = monthRange(selectedFilterMonth));
+  }
+}
+
+function renderDateFilter() {
+  $$('[data-date-filter]').forEach(button => {
+    const isActive = button.dataset.dateFilter === activeDateFilter;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-selected', String(isActive));
+  });
+  $$('[data-date-control]').forEach(control => { control.hidden = control.dataset.dateControl !== activeDateFilter; });
+  $('#dayFilterDate').value = selectedFilterDay;
+  $('#weekFilterWeek').value = selectedFilterWeek;
+  $('#monthFilterMonth').value = selectedFilterMonth;
+  $('#dateFilterRange').textContent = dateRangeLabel();
+}
 
 function dateRangeTotal() {
   const period = getPeriod();
@@ -287,8 +347,7 @@ function renderDashboard() {
   const period = getPeriod();
   const week = getWeek();
   $('#dashboardSubtitle').textContent = `${period.name} · ${period.sheet}`;
-  $('#rangeStartDate').value = rangeStartDate;
-  $('#rangeEndDate').value = rangeEndDate;
+  renderDateFilter();
   $('#kpiDailySpent').textContent = money(dailySpentToday());
   $('#kpiDailySpentNote').textContent = `Hoy · ${shortDate(localToday())}`;
   $('#kpiSpent').textContent = money(selectedTotal());
@@ -527,14 +586,24 @@ function bindEvents() {
   document.addEventListener('click', event => {
     if (!event.target.closest('#periodSelectControl')) setPeriodMenuOpen(false);
   });
-  $('#rangeStartDate').addEventListener('change', event => {
-    rangeStartDate = event.target.value || `${localToday().slice(0, 7)}-01`;
-    if (rangeStartDate > rangeEndDate) rangeEndDate = rangeStartDate;
+  $$('[data-date-filter]').forEach(button => button.addEventListener('click', () => {
+    activeDateFilter = button.dataset.dateFilter;
+    applyDateFilter();
+    renderDashboard();
+  }));
+  $('#dayFilterDate').addEventListener('change', event => {
+    selectedFilterDay = event.target.value || localToday();
+    applyDateFilter();
     renderDashboard();
   });
-  $('#rangeEndDate').addEventListener('change', event => {
-    rangeEndDate = event.target.value || localToday();
-    if (rangeEndDate < rangeStartDate) rangeStartDate = rangeEndDate;
+  $('#weekFilterWeek').addEventListener('change', event => {
+    selectedFilterWeek = event.target.value || dateToIsoWeek(localToday());
+    applyDateFilter();
+    renderDashboard();
+  });
+  $('#monthFilterMonth').addEventListener('change', event => {
+    selectedFilterMonth = event.target.value || localToday().slice(0, 7);
+    applyDateFilter();
     renderDashboard();
   });
   $('#captureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
