@@ -324,7 +324,6 @@ function setView(view) {
   $$('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.view === view));
   if (view === 'capture') renderCapture();
   if (view === 'expenses') renderExpenses();
-  if (view === 'history') renderHistory();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -533,15 +532,6 @@ function expenseRowHtml(item, todayBreakdown, weeklyBreakdown, monthlyBreakdown)
 
 function totalRowHtml(today, weekly, monthly) {
   return `<tr class="total-row"><td>Total</td><td class="align-right">${money(today)}</td><td class="align-right">${money(weekly)}</td><td class="align-right">${money(monthly)}</td></tr>`;
-}
-
-function renderHistory() {
-  const allWeeks = periods.flatMap(period => period.weeks.map((week, index) => ({ period, week, index, total: weekActualTotal(period.id, index, week) })));
-  const sortedWeeks = allWeeks.slice().sort((a, b) => String(b.week.start || '').localeCompare(String(a.week.start || '')));
-  const chartWeeks = sortedWeeks.filter(item => item.total > 0).slice(0, 18).reverse();
-  const max = Math.max(...chartWeeks.map(item => item.total), 1);
-  $('#historyChart').innerHTML = chartWeeks.map(item => `<div class="chart-column"><div class="chart-bar-wrap"><div class="chart-bar" style="height:${Math.max(3, item.total / max * 100)}%" data-value="${money(item.total)}"></div></div><span class="chart-label" title="${escapeHtml(item.period.name)} · ${escapeHtml(item.week.label)}">${escapeHtml(item.week.label)}</span></div>`).join('');
-  $('#historyRows').innerHTML = sortedWeeks.map(item => `<tr><td><span class="tag">${escapeHtml(item.period.sheet)}</span></td><td>${escapeHtml(item.week.label)}</td><td class="align-right amount-cell">${money(item.total)}</td></tr>`).join('');
 }
 
 function setPeriodMenuOpen(isOpen) {
@@ -769,11 +759,10 @@ function bindEvents() {
     showToast('CSV descargado.'); 
   });
 
-  $('#historyExport').addEventListener('click', () => { const rows = [['Hoja', 'Semana', 'Gasto']]; periods.forEach(period => period.weeks.forEach((week, index) => rows.push([period.sheet, week.label, weekActualTotal(period.id, index, week)]))); downloadCsv('historico-control-gastos.csv', rows); showToast('Histórico descargado.'); });
   $('#refreshData').addEventListener('click', () => syncExpenses({ migrateLegacy: true }));
 }
 
-function renderAll() { renderSelectors(); renderDashboard(); if (activeView === 'capture') renderCapture(); if (activeView === 'expenses') renderExpenses(); if (activeView === 'history') renderHistory(); }
+function renderAll() { renderSelectors(); renderDashboard(); if (activeView === 'capture') renderCapture(); if (activeView === 'expenses') renderExpenses(); }
 
 bindEvents();
 $('#expenseDate').value = localToday();
