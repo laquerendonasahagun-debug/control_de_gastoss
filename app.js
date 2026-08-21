@@ -100,6 +100,9 @@ const weekActualTotal = (periodId, weekIndex, week) => {
   return importedTotal + capturedTotal;
 };
 const selectedTotal = () => weekActualTotal(selectedPeriodId, selectedWeekIndex, getWeek());
+const dailySpentToday = () => [...excelEntries, ...state.manualEntries]
+  .filter(entry => String(entry.date || '') === localToday())
+  .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
 const selectedMonthKey = () => String(getWeek().start || localToday()).slice(0, 7);
 const monthYearLabel = monthKey => {
   const label = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(new Date(`${monthKey}-01T12:00:00`));
@@ -286,6 +289,8 @@ function renderDashboard() {
   $('#dashboardSubtitle').textContent = `${period.name} · ${period.sheet}`;
   $('#rangeStartDate').value = rangeStartDate;
   $('#rangeEndDate').value = rangeEndDate;
+  $('#kpiDailySpent').textContent = money(dailySpentToday());
+  $('#kpiDailySpentNote').textContent = `Hoy · ${shortDate(localToday())}`;
   $('#kpiSpent').textContent = money(selectedTotal());
   $('#kpiSpentNote').textContent = `${period.sheet} · ${week.label}`;
   $('#kpiMonthlySpent').textContent = money(monthlySpentForSelection());
