@@ -136,9 +136,6 @@ const weekActualTotal = (periodId, weekIndex, week) => {
   return importedTotal + capturedTotal;
 };
 const selectedTotal = () => weekActualTotal(selectedPeriodId, selectedWeekIndex, getWeek());
-const dailySpentToday = () => [...excelEntries, ...state.manualEntries]
-  .filter(entry => String(entry.date || '') === localToday())
-  .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
 const selectedMonthKey = () => String(getWeek().start || localToday()).slice(0, 7);
 const monthYearLabel = monthKey => {
   const label = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(new Date(`${monthKey}-01T12:00:00`));
@@ -173,7 +170,21 @@ const breakdownTotal = (items, breakdown) => items.reduce((sum, item) => sum + N
 
 const entryIsInRange = entry => entry.periodId === selectedPeriodId && entry.date >= rangeStartDate && entry.date <= rangeEndDate;
 const dateRangeEntries = () => [...excelEntries, ...state.manualEntries].filter(entryIsInRange);
-const dateRangeLabel = () => rangeStartDate === rangeEndDate ? shortDate(rangeStartDate) : `${shortDate(rangeStartDate)} – ${shortDate(rangeEndDate)}`;
+const dateSpanLabel = (start, end) => start === end ? shortDate(start) : `${shortDate(start)} – ${shortDate(end)}`;
+const dateRangeLabel = () => dateSpanLabel(rangeStartDate, rangeEndDate);
+const dashboardTotalForRange = (start, end) => [...excelEntries, ...state.manualEntries]
+  .filter(entry => entry.periodId === selectedPeriodId && String(entry.date || '') >= start && String(entry.date || '') <= end)
+  .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+const dashboardDailyTotal = () => dashboardTotalForRange(selectedFilterDay, selectedFilterDay);
+const dashboardWeeklyRange = () => isoWeekRange(selectedFilterWeek);
+const dashboardWeeklyTotal = () => {
+  const { start, end } = dashboardWeeklyRange();
+  return dashboardTotalForRange(start, end);
+};
+const dashboardMonthlyTotal = () => {
+  const { start, end } = monthRange(selectedFilterMonth);
+  return dashboardTotalForRange(start, end);
+};
 
 function applyDateFilter() {
   if (activeDateFilter === 'day') {
@@ -345,15 +356,15 @@ function renderSelectors() {
 
 function renderDashboard() {
   const period = getPeriod();
-  const week = getWeek();
+  const weeklyRange = dashboardWeeklyRange();
   $('#dashboardSubtitle').textContent = `${period.name} · ${period.sheet}`;
   renderDateFilter();
-  $('#kpiDailySpent').textContent = money(dailySpentToday());
-  $('#kpiDailySpentNote').textContent = `Hoy · ${shortDate(localToday())}`;
-  $('#kpiSpent').textContent = money(selectedTotal());
-  $('#kpiSpentNote').textContent = `${period.sheet} · ${week.label}`;
-  $('#kpiMonthlySpent').textContent = money(monthlySpentForSelection());
-  $('#kpiMonthlySpentNote').textContent = monthYearLabel(selectedMonthKey());
+  $('#kpiDailySpent').textContent = money(dashboardDailyTotal());
+  $('#kpiDailySpentNote').textContent = `${selectedFilterDay === localToday() ? 'Hoy' : 'Día seleccionado'} · ${shortDate(selectedFilterDay)}`;
+  $('#kpiSpent').textContent = money(dashboardWeeklyTotal());
+  $('#kpiSpentNote').textContent = `${period.sheet} · ${dateSpanLabel(weeklyRange.start, weeklyRange.end)}`;
+  $('#kpiMonthlySpent').textContent = money(dashboardMonthlyTotal());
+  $('#kpiMonthlySpentNote').textContent = monthYearLabel(selectedFilterMonth);
   $('#conceptCaption').textContent = dateRangeLabel();
   $('#spendingPieCaption').textContent = dateRangeLabel();
   renderConceptBars();
