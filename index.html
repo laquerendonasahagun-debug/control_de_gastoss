@@ -5,10 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#173f36" />
     <title>Control de gastos · La Querendona Tepeapulco</title>
-    <link rel="stylesheet" href="styles.css?v=2026-08-20-1" />
+    <link rel="stylesheet" href="styles.css?v=2026-08-25-2" />
   </head>
   <body>
-    <div class="app-shell">
+    <section class="login-screen" id="loginScreen">
+      <div class="login-card">
+        <div class="login-brand">
+          <img src="assets/logo-la-querendona.png" alt="Logo de La Querendona" />
+          <div><strong>La Querendona Tepeapulco</strong><span>Control de gastos</span></div>
+        </div>
+        <p class="eyebrow">Acceso al sistema</p>
+        <h1>Iniciar sesión</h1>
+        <p class="login-intro">Ingresa con la cuenta asignada para continuar.</p>
+        <form id="loginForm" class="login-form">
+          <label>Usuario<input id="loginUsername" type="text" autocomplete="username" required /></label>
+          <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required /></label>
+          <p class="login-error" id="loginError" role="alert" aria-live="polite"></p>
+          <button class="primary-button" type="submit">Entrar <span>→</span></button>
+        </form>
+      </div>
+    </section>
+
+    <div class="app-shell" id="appShell" hidden>
       <aside class="sidebar" aria-label="Navegación principal">
         <div class="brand">
           <img class="brand-mark" src="assets/logo-la-querendona.png" alt="Logo de La Querendona" />
@@ -20,20 +38,25 @@
 
         <div class="side-label">Menú</div>
         <nav class="main-nav">
-          <button class="nav-item active" data-view="dashboard"><span class="nav-icon">⌂</span>Resumen</button>
+          <button class="nav-item active" data-view="dashboard" data-admin-only><span class="nav-icon">⌂</span>Resumen</button>
           <button class="nav-item" data-view="capture"><span class="nav-icon">＋</span>Capturar gasto</button>
-          <button class="nav-item" data-view="expenses"><span class="nav-icon">▤</span>Registro de gastos</button>
+          <button class="nav-item" data-view="expenses" data-admin-only><span class="nav-icon">▤</span>Registro de gastos</button>
         </nav>
 
         <div class="sidebar-footer">
-          <div class="store-card">
+          <div class="account-card">
+            <strong id="sessionDisplayName">Usuario</strong>
+            <span id="sessionRole">Sesión activa</span>
+          </div>
+          <div class="store-card" data-admin-only>
             <span class="store-dot" id="databaseStatusDot" data-status="syncing"></span>
             <div>
               <strong>Tepeapulco</strong>
               <span id="databaseStatus">Sincronizando…</span>
             </div>
           </div>
-          <button class="reset-link" id="refreshData">Actualizar datos</button>
+          <button class="reset-link" id="refreshData" data-admin-only>Actualizar datos</button>
+          <button class="logout-link" id="logoutButton" type="button">Cerrar sesión</button>
         </div>
       </aside>
 
@@ -50,14 +73,14 @@
             </div>
           </div>
           <div class="topbar-actions">
-            <button class="ghost-button" id="exportCsv"><span>↓</span> Exportar Excel</button>
+            <button class="ghost-button" id="exportCsv" data-admin-only><span>↓</span> Exportar Excel</button>
             <button class="primary-button" data-view="capture"><span>＋</span> Nuevo gasto</button>
           </div>
         </header>
 
         <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-        <section id="dashboardView" class="view active-view">
+        <section id="dashboardView" class="view active-view" data-admin-only>
           <div class="page-heading">
             <div>
               <p class="eyebrow">Control operativo</p>
@@ -177,10 +200,10 @@
                     <label>Monto *<div class="currency-input"><span>$</span><input id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="0.00" required /></div></label>
                     <label>Nota<input id="expenseNote" type="text" maxlength="80" placeholder="Ej. compra de insumos para el turno" /></label>
                   </div>
-                  <div class="form-actions"><button type="button" class="ghost-button" id="expenseCancelButton">Cancelar</button><button class="primary-button" type="submit">Guardar gasto <span>→</span></button></div>
+                  <div class="form-actions"><button type="button" class="ghost-button" id="expenseCancelButton" data-admin-only>Cancelar</button><button class="primary-button" type="submit">Guardar gasto <span>→</span></button></div>
                 </form>
               </article>
-              <aside class="panel tip-panel">
+              <aside class="panel tip-panel" data-admin-only>
                 <div class="tip-icon">✦</div>
                 <p class="eyebrow">Tip de control</p><h3>Registra el gasto el mismo día.</h3>
                 <div class="tip-rule"></div><div class="tip-stat"><span>Gasto registrado esta semana</span><strong id="captureWeeklySpent">$0</strong></div>
@@ -221,10 +244,10 @@
               </div>
             </article>
           </div>
-          <article class="panel table-panel capture-history"><div class="panel-heading"><div><p class="eyebrow">Registros de la semana</p><h3>Movimientos registrados</h3></div><span class="panel-caption" id="newMovementCount">0 registros</span></div><div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Realizó el gasto</th><th>Pago</th><th>Nota</th><th class="align-right">Monto</th><th></th></tr></thead><tbody id="newMovementRows"></tbody></table></div></article>
+          <article class="panel table-panel capture-history" data-admin-only><div class="panel-heading"><div><p class="eyebrow">Registros de la semana</p><h3>Movimientos registrados</h3></div><span class="panel-caption" id="newMovementCount">0 registros</span></div><div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Realizó el gasto</th><th>Pago</th><th>Nota</th><th class="align-right">Monto</th><th></th></tr></thead><tbody id="newMovementRows"></tbody></table></div></article>
         </section>
 
-        <section id="expensesView" class="view">
+        <section id="expensesView" class="view" data-admin-only>
           <div class="page-heading"><div><p class="eyebrow">Control operativo</p><h1>Registro de gastos</h1></div></div>
           <div class="expense-summary-grid"><article class="summary-card"><span>Gastos operativos · semanal</span><strong id="operatingWeekly">$0</strong><small>Compras e insumos registrados</small></article><article class="summary-card"><span>Gastos fijos · semanal</span><strong id="fixedWeekly">$0</strong><small>Costos registrados</small></article><article class="summary-card accent"><span>Gasto total · mensual</span><strong id="expenseGrandMonthly">$0</strong><small>Operativos + fijos</small></article></div>
           <div class="content-grid expense-columns"><article class="panel table-panel"><div class="panel-heading"><div><p class="eyebrow">Gastos operativos</p><h3>Gastos por concepto</h3></div></div><div class="table-scroll"><table><thead><tr><th>Concepto</th><th class="align-right">Día (hoy)</th><th class="align-right">Semanal</th><th class="align-right">Mensual</th></tr></thead><tbody id="operatingExpenseRows"></tbody><tfoot id="operatingExpenseTotal"></tfoot></table></div></article><article class="panel table-panel fixed-expense-panel"><div class="panel-heading"><div><p class="eyebrow">Gastos fijos</p><h3>Gastos por concepto</h3></div></div><div class="table-scroll"><table><thead><tr><th>Concepto</th><th class="align-right">Día (hoy)</th><th class="align-right">Semanal</th><th class="align-right">Mensual</th></tr></thead><tbody id="fixedExpenseRows"></tbody><tfoot id="fixedExpenseTotal"></tfoot></table></div></article></div>
@@ -253,6 +276,6 @@
     </dialog>
     <script src="period-data.js"></script>
     <script src="excel-data.js"></script>
-    <script src="app.js?v=2026-08-25-1"></script>
+    <script src="app.js?v=2026-08-25-2"></script>
   </body>
 </html>

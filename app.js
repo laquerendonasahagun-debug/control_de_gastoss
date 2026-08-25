@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'la-querendona-control-gastos-v1';
 const EXPENSES_API = '/api/expenses';
+const AUTH_API = '/api/auth';
 
 const expenseItems = [
   { id: 'abarrote', name: 'Abarrote', group: 'operating' },
@@ -57,6 +58,7 @@ let activeDateFilter = 'month';
 let selectedFilterDay = '';
 let selectedFilterWeek = '';
 let selectedFilterMonth = '';
+let currentUser = null;
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
@@ -257,8 +259,62 @@ async function apiRequest(options = {}) {
     cache: 'no-store',
   });
   const payload = await response.json().catch(() => ({}));
+  if (response.status === 401) showLogin(payload.error || 'Inicia sesión nuevamente.');
   if (!response.ok) throw new Error(payload.error || 'No fue posible conectar con la base de datos.');
   return payload;
+}
+
+async function authRequest(options = {}) {
+  const response = await fetch(AUTH_API, {
+    method: options.method || 'GET',
+    headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+    cache: 'no-store',
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || 'No fue posible iniciar sesión.');
+  return payload;
+}
+
+function showLogin(message = '') {
+  currentUser = null;
+  databaseReady = false;
+  state.manualEntries = [];
+  closeExpenseEdit();
+  $('#appShell').hidden = true;
+  $('#loginScreen').hidden = false;
+  $('#loginError').textContent = message;
+  $('#loginPassword').value = '';
+  window.setTimeout(() => $('#loginUsername').focus(), 0);
+}
+
+function applyRoleVisibility() {
+  const isAdmin = currentUser?.role === 'admin';
+  $$('[data-admin-only]').forEach(element => { element.hidden = !isAdmin; });
+  $('#appShell').dataset.role = currentUser?.role || '';
+  $('#sessionDisplayName').textContent = currentUser?.displayName || 'Usuario';
+  $('#sessionRole').textContent = isAdmin ? 'Acceso completo' : 'Solo captura de gastos';
+}
+
+async function startSession(user) {
+  currentUser = user;
+  applyRoleVisibility();
+  $('#loginScreen').hidden = true;
+  $('#appShell').hidden = false;
+  activeView = user.role === 'admin' ? 'dashboard' : 'capture';
+  databaseReady = user.role === 'employee';
+  renderAll();
+  setView(activeView);
+  if (user.role === 'admin') await syncExpenses({ migrateLegacy: true, silent: true });
+}
+
+async function initializeSession() {
+  try {
+    const payload = await authRequest();
+    await startSession(payload.user);
+  } catch (error) {
+    showLogin('');
+  }
 }
 
 function setDatabaseStatus(status, label) {
@@ -269,6 +325,7 @@ function setDatabaseStatus(status, label) {
 }
 
 async function syncExpenses({ migrateLegacy = true, silent = false } = {}) {
+  if (currentUser?.role !== 'admin') return;
   if (databaseSyncing) return;
   databaseSyncing = true;
   setDatabaseStatus('syncing', 'Sincronizando…');
@@ -319,6 +376,7 @@ function showToast(message) {
 }
 
 function setView(view) {
+  if (currentUser?.role !== 'admin' && view !== 'capture') return;
   activeView = view;
   $$('.view').forEach(section => section.classList.toggle('active-view', section.id === `${view}View`));
   $$('.nav-item').forEach(button => button.classList.toggle('active', button.dataset.view === view));
@@ -564,6 +622,28 @@ function downloadCsv(filename, rows) {
 }
 
 function bindEvents() {
+  $('#loginForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const submitButton = event.submitter;
+    $('#loginError').textContent = '';
+    if (submitButton) submitButton.disabled = true;
+    try {
+      const payload = await authRequest({
+        method: 'POST',
+        body: { username: $('#loginUsername').value.trim(), password: $('#loginPassword').value },
+      });
+      await startSession(payload.user);
+    } catch (error) {
+      $('#loginError').textContent = error.message;
+      $('#loginPassword').select();
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  });
+  $('#logoutButton').addEventListener('click', async () => {
+    try { await authRequest({ method: 'DELETE' }); } catch (error) { console.warn('No se pudo cerrar la sesión en el servidor:', error); }
+    showLogin('Sesión cerrada correctamente.');
+  });
   document.addEventListener('click', async event => {
     const viewButton = event.target.closest('[data-view]');
     if (viewButton) setView(viewButton.dataset.view);
@@ -659,10 +739,10 @@ function bindEvents() {
     if (submitButton) submitButton.disabled = true;
     try {
       const payload = await apiRequest({ method: 'POST', body: { entry: newEntry } });
-      state.manualEntries = payload.entries;
+      if (Array.isArray(payload.entries)) state.manualEntries = payload.entries;
       resetExpenseForm();
       renderAll();
-      showToast('Gasto guardado en Neon y totales actualizados.');
+      showToast(currentUser?.role === 'admin' ? 'Gasto guardado en Neon y totales actualizados.' : 'Gasto guardado correctamente.');
     } catch (error) {
       showToast(error.message);
     } finally {
@@ -694,7 +774,7 @@ function bindEvents() {
     if (submitButton) submitButton.disabled = true;
     try {
       const payload = await apiRequest({ method: 'POST', body: { entry: updatedEntry } });
-      state.manualEntries = payload.entries;
+      if (Array.isArray(payload.entries)) state.manualEntries = payload.entries;
       closeExpenseEdit();
       renderAll();
       showToast('Gasto actualizado en Neon.');
@@ -752,7 +832,7 @@ function bindEvents() {
     event.currentTarget.disabled = true;
     try {
       const payload = await apiRequest({ method: 'POST', body: { entries: entriesToSave } });
-      state.manualEntries = payload.entries;
+      if (Array.isArray(payload.entries)) state.manualEntries = payload.entries;
       bulkDraftEntries = [];
       renderAll();
       showToast(`${entriesToSave.length} ${entriesToSave.length === 1 ? 'gasto guardado' : 'gastos guardados'} en Neon.`);
@@ -779,17 +859,21 @@ function bindEvents() {
   $('#refreshData').addEventListener('click', () => syncExpenses({ migrateLegacy: true }));
 }
 
-function renderAll() { renderSelectors(); renderDashboard(); if (activeView === 'capture') renderCapture(); if (activeView === 'expenses') renderExpenses(); }
+function renderAll() {
+  renderSelectors();
+  if (currentUser?.role === 'admin') renderDashboard();
+  if (activeView === 'capture') renderCapture();
+  if (activeView === 'expenses' && currentUser?.role === 'admin') renderExpenses();
+}
 
 bindEvents();
 $('#expenseDate').value = localToday();
 $('#bulkExpenseDate').value = localToday();
-renderAll();
-syncExpenses({ migrateLegacy: true });
-window.addEventListener('focus', () => syncExpenses({ migrateLegacy: false, silent: true }));
+initializeSession();
+window.addEventListener('focus', () => { if (currentUser?.role === 'admin') syncExpenses({ migrateLegacy: false, silent: true }); });
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') syncExpenses({ migrateLegacy: false, silent: true });
+  if (document.visibilityState === 'visible' && currentUser?.role === 'admin') syncExpenses({ migrateLegacy: false, silent: true });
 });
 window.setInterval(() => {
-  if (document.visibilityState === 'visible') syncExpenses({ migrateLegacy: false, silent: true });
+  if (document.visibilityState === 'visible' && currentUser?.role === 'admin') syncExpenses({ migrateLegacy: false, silent: true });
 }, 30000);

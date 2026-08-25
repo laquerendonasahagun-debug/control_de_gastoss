@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { requireSession } from '../lib/auth.js';
 
 const MAX_BATCH_SIZE = 100;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -43,7 +44,7 @@ function cleanText(value, fallback, maxLength) {
   return text.slice(0, maxLength);
 }
 
-function normalizeEntry(entry) {
+function normalizeEntry(entry, { forceNewId = false } = {}) {
   const date = cleanText(entry?.date, '', 10);
   const amount = Number(entry?.amount);
   const weekIndex = Number(entry?.weekIndex);
@@ -57,7 +58,7 @@ function normalizeEntry(entry) {
   if (!category || !periodId) throw new Error('Faltan datos obligatorios del gasto.');
 
   return {
-    id: cleanText(entry?.id, `manual-${crypto.randomUUID()}`, 120),
+    id: forceNewId ? `manual-${crypto.randomUUID()}` : cleanText(entry?.id, `manual-${crypto.randomUUID()}`, 120),
     date,
     category,
     amount: Math.round(amount * 100) / 100,
@@ -115,6 +116,10 @@ export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store, max-age=0');
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
 
+  const adminOnly = request.method === 'GET' || request.method === 'DELETE';
+  const session = requireSession(request, response, adminOnly ? ['admin'] : ['admin', 'employee']);
+  if (!session) return;
+
   if (!databaseUrl()) return json(response, 503, { error: 'La conexión con la base de datos todavía no está configurada.' });
 
   try {
@@ -130,32 +135,43 @@ export default async function handler(request, response) {
       const rawEntries = Array.isArray(requestBody?.entries) ? requestBody.entries : [requestBody?.entry].filter(Boolean);
       if (!rawEntries.length) return json(response, 400, { error: 'No se recibieron gastos.' });
       if (rawEntries.length > MAX_BATCH_SIZE) return json(response, 400, { error: `Solo se permiten ${MAX_BATCH_SIZE} gastos por envío.` });
-      const entries = rawEntries.map(normalizeEntry);
+      const entries = rawEntries.map(entry => normalizeEntry(entry, { forceNewId: session.role === 'employee' }));
 
-      await sql.transaction(entries.map(entry => sql`
-        INSERT INTO tepeapulco_expenses (
-          id, expense_date, category, amount, note, payment, spender,
-          expense_type, period_id, week_index, source
-        ) VALUES (
-          ${entry.id}, ${entry.date}, ${entry.category}, ${entry.amount}, ${entry.note},
-          ${entry.payment}, ${entry.spender}, ${entry.expenseType}, ${entry.periodId},
-          ${entry.weekIndex}, ${entry.source}
-        )
-        ON CONFLICT (id) DO UPDATE SET
-          expense_date = EXCLUDED.expense_date,
-          category = EXCLUDED.category,
-          amount = EXCLUDED.amount,
-          note = EXCLUDED.note,
-          payment = EXCLUDED.payment,
-          spender = EXCLUDED.spender,
-          expense_type = EXCLUDED.expense_type,
-          period_id = EXCLUDED.period_id,
-          week_index = EXCLUDED.week_index,
-          source = EXCLUDED.source,
-          updated_at = NOW()
-      `));
+      await sql.transaction(entries.map(entry => session.role === 'admin' ? sql`
+          INSERT INTO tepeapulco_expenses (
+            id, expense_date, category, amount, note, payment, spender,
+            expense_type, period_id, week_index, source
+          ) VALUES (
+            ${entry.id}, ${entry.date}, ${entry.category}, ${entry.amount}, ${entry.note},
+            ${entry.payment}, ${entry.spender}, ${entry.expenseType}, ${entry.periodId},
+            ${entry.weekIndex}, ${entry.source}
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            expense_date = EXCLUDED.expense_date,
+            category = EXCLUDED.category,
+            amount = EXCLUDED.amount,
+            note = EXCLUDED.note,
+            payment = EXCLUDED.payment,
+            spender = EXCLUDED.spender,
+            expense_type = EXCLUDED.expense_type,
+            period_id = EXCLUDED.period_id,
+            week_index = EXCLUDED.week_index,
+            source = EXCLUDED.source,
+            updated_at = NOW()
+        ` : sql`
+          INSERT INTO tepeapulco_expenses (
+            id, expense_date, category, amount, note, payment, spender,
+            expense_type, period_id, week_index, source
+          ) VALUES (
+            ${entry.id}, ${entry.date}, ${entry.category}, ${entry.amount}, ${entry.note},
+            ${entry.payment}, ${entry.spender}, ${entry.expenseType}, ${entry.periodId},
+            ${entry.weekIndex}, ${entry.source}
+          )
+        `));
 
-      return json(response, 200, { entries: await listEntries(sql) });
+      return session.role === 'admin'
+        ? json(response, 200, { entries: await listEntries(sql) })
+        : json(response, 200, { saved: entries.length });
     }
 
     if (request.method === 'DELETE') {
