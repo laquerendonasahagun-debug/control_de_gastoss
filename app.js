@@ -366,8 +366,12 @@ function renderDashboard() {
   $('#kpiMonthlySpentNote').textContent = monthYearLabel(selectedFilterMonth);
   $('#conceptCaption').textContent = dateRangeLabel();
   $('#spendingPieCaption').textContent = dateRangeLabel();
+  $('#operatingPieCaption').textContent = dateRangeLabel();
+  $('#fixedPieCaption').textContent = dateRangeLabel();
   renderConceptBars();
-  renderSpendingPie();
+  renderSpendingPie('spendingPieContent');
+  renderSpendingPie('operatingPieContent', 'operating');
+  renderSpendingPie('fixedPieContent', 'fixed');
   renderMovementTable();
 }
 
@@ -383,12 +387,18 @@ function renderConceptBars() {
   container.innerHTML = rows.map(([id, amount]) => `<div class="concept-row"><span class="concept-name" title="${escapeHtml(getItem(id)?.name || id)}">${escapeHtml(getItem(id)?.name || id)}</span><div class="concept-track"><div class="concept-fill" style="width:${Math.max(3, (amount / max) * 100)}%"></div></div><span class="concept-amount">${money(amount)}</span></div>`).join('');
 }
 
-function renderSpendingPie() {
+function renderSpendingPie(containerId, group = '') {
   const breakdown = dateRangeBreakdown();
-  const container = $('#spendingPieContent');
-  const rows = Object.entries(breakdown || {}).filter(([, amount]) => amount > 0).sort((a, b) => b[1] - a[1]);
+  const container = $(`#${containerId}`);
+  const rows = Object.entries(breakdown || {})
+    .filter(([id, amount]) => amount > 0 && (!group || getItem(id)?.group === group))
+    .sort((a, b) => b[1] - a[1]);
   if (!rows.length) {
-    container.innerHTML = `<div class="empty-row spending-pie-empty">La gráfica aparecerá cuando registres gastos en este rango.</div>`;
+    const typeLabel = group === 'operating' ? 'operativos' : group === 'fixed' ? 'fijos' : '';
+    const emptyMessage = typeLabel
+      ? `No hay gastos ${typeLabel} registrados en este rango.`
+      : 'La gráfica aparecerá cuando registres gastos en este rango.';
+    container.innerHTML = `<div class="empty-row spending-pie-empty">${emptyMessage}</div>`;
     return;
   }
 
