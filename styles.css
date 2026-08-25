@@ -177,3 +177,12 @@ h3 { margin-bottom: 0; font-size: 17px; }
 @media (max-width: 760px) { .dashboard-kpi-grid { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .spending-pie-layout { grid-template-columns: 1fr; justify-items: center; }.spending-pie-legend { width: 100%; } }
 @media (max-width: 760px) { .date-filter { width: 100%; min-width: 0; }.date-filter-heading { align-items: flex-start; flex-direction: column; }.date-filter-tabs { width: 100%; }.date-filter-tab { flex: 1; }.date-filter-body { align-items: stretch; flex-direction: column; }.date-filter-control input { width: 100%; }.date-filter-range { min-width: 0; padding: 0; text-align: left; } }
+@media (max-width: 760px) {
+  .topbar { display: block; min-height: 0; padding: 15px 0; margin-bottom: 24px; }
+  .mobile-brand { display: none; }
+  .period-control { width: 100%; margin: 0; display: grid; gap: 7px; }
+  .period-control label { display: block; }
+  .period-control .period-select { width: 100%; max-width: none; }
+  .period-control .custom-select-button { min-height: 44px; padding: 10px 12px; font-size: 12px; }
+  .period-select-menu { width: 100%; min-width: 100%; max-width: none; }
+}
