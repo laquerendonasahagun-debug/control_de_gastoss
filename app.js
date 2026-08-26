@@ -62,6 +62,7 @@ let currentUser = null;
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
+const mobilePeriodMedia = window.matchMedia('(max-width: 760px)');
 const money = value => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(Number(value) || 0);
 const newExpenseId = () => `manual-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
 const shortDate = value => value ? new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`)).replace('.', '') : '—';
@@ -428,6 +429,12 @@ function renderDashboard() {
   renderSpendingPie('spendingPieContent');
   renderExpenseTypePie();
   renderMovementTable();
+}
+
+function placePeriodControl() {
+  const control = $('.period-control');
+  const target = mobilePeriodMedia.matches ? $('#mobilePeriodMount') : $('#desktopPeriodMount');
+  if (control && target && control.parentElement !== target) target.append(control);
 }
 
 function renderConceptBars() {
@@ -892,6 +899,9 @@ function renderAll() {
 }
 
 bindEvents();
+placePeriodControl();
+if (mobilePeriodMedia.addEventListener) mobilePeriodMedia.addEventListener('change', placePeriodControl);
+else mobilePeriodMedia.addListener(placePeriodControl);
 $('#expenseDate').value = localToday();
 $('#bulkExpenseDate').value = localToday();
 initializeSession();

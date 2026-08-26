@@ -28,12 +28,15 @@
 
     <div class="app-shell" id="appShell" hidden>
       <aside class="sidebar" aria-label="Navegación principal">
-        <div class="brand">
-          <img class="brand-mark" src="assets/logo-la-querendona.png" alt="Logo de La Querendona" />
-          <div>
-            <strong>La Querendona Tepeapulco</strong>
-            <span>Control de gastos</span>
+        <div class="sidebar-heading">
+          <div class="brand">
+            <img class="brand-mark" src="assets/logo-la-querendona.png" alt="Logo de La Querendona" />
+            <div>
+              <strong>La Querendona Tepeapulco</strong>
+              <span>Control de gastos</span>
+            </div>
           </div>
+          <div class="mobile-period-mount" id="mobilePeriodMount"></div>
         </div>
 
         <div class="side-label">Menú</div>
@@ -63,13 +66,15 @@
       <main class="main-content">
         <header class="topbar">
           <div class="mobile-brand"><img class="brand-mark" src="assets/logo-la-querendona.png" alt="Logo de La Querendona" /><strong>La Querendona Tepeapulco</strong></div>
-          <div class="period-control">
-            <label for="periodSelectButton">Periodo</label>
-            <div class="custom-select period-select" id="periodSelectControl">
-              <button class="custom-select-button" id="periodSelectButton" type="button" aria-haspopup="listbox" aria-expanded="false">
-                <span id="periodSelectValue">Seleccionar periodo</span><span class="select-chevron">⌄</span>
-              </button>
-              <div class="custom-select-menu period-select-menu" id="periodSelectMenu" role="listbox" aria-label="Seleccionar periodo"></div>
+          <div class="desktop-period-mount" id="desktopPeriodMount">
+            <div class="period-control">
+              <label for="periodSelectButton">Periodo</label>
+              <div class="custom-select period-select" id="periodSelectControl">
+                <button class="custom-select-button" id="periodSelectButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+                  <span id="periodSelectValue">Seleccionar periodo</span><span class="select-chevron">⌄</span>
+                </button>
+                <div class="custom-select-menu period-select-menu" id="periodSelectMenu" role="listbox" aria-label="Seleccionar periodo"></div>
+              </div>
             </div>
           </div>
           <div class="topbar-actions">
