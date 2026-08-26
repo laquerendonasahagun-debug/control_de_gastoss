@@ -424,12 +424,10 @@ function renderDashboard() {
   $('#kpiMonthlySpentNote').textContent = monthYearLabel(selectedFilterMonth);
   $('#conceptCaption').textContent = dateRangeLabel();
   $('#spendingPieCaption').textContent = dateRangeLabel();
-  $('#operatingPieCaption').textContent = dateRangeLabel();
-  $('#fixedPieCaption').textContent = dateRangeLabel();
+  $('#expenseTypePieCaption').textContent = dateRangeLabel();
   renderConceptBars();
   renderSpendingPie('spendingPieContent');
-  renderSpendingPie('operatingPieContent', 'operating');
-  renderSpendingPie('fixedPieContent', 'fixed');
+  renderExpenseTypePie();
   renderMovementTable();
 }
 
@@ -474,6 +472,34 @@ function renderSpendingPie(containerId, group = '') {
   const accessibleSummary = segments.map(segment => `${segment.id === 'other' ? 'Otros' : getItem(segment.id)?.name || segment.id}: ${money(segment.amount)}`).join(', ');
 
   container.innerHTML = `<div class="spending-pie-layout"><div class="spending-pie" role="img" aria-label="Distribución del gasto. ${escapeHtml(accessibleSummary)}" style="background:conic-gradient(${gradient})"><div class="spending-pie-center"><span>Total</span><strong>${money(total)}</strong></div></div><div class="spending-pie-legend">${segments.map((segment, index) => { const name = segment.id === 'other' ? 'Otros' : getItem(segment.id)?.name || segment.id; const percentage = Math.round(segment.amount / total * 100); return `<div class="spending-pie-legend-row ${index === 0 ? 'is-leading' : ''}"><span class="spending-pie-dot" style="background:${segment.color}"></span><span class="spending-pie-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span><strong>${percentage}%</strong>${index === 0 ? '<small>Mayor gasto</small>' : ''}</div>`; }).join('')}</div></div>`;
+}
+
+function renderExpenseTypePie() {
+  const container = $('#expenseTypePieContent');
+  const breakdown = dateRangeBreakdown();
+  const totals = Object.entries(breakdown || {}).reduce((result, [id, amount]) => {
+    const group = getItem(id)?.group;
+    if (group === 'operating' || group === 'fixed') result[group] += Number(amount) || 0;
+    return result;
+  }, { operating: 0, fixed: 0 });
+  const total = totals.operating + totals.fixed;
+
+  if (!total) {
+    container.innerHTML = '<div class="empty-row spending-pie-empty">La gráfica aparecerá cuando registres gastos en este rango.</div>';
+    return;
+  }
+
+  const operatingPercentage = Math.round(totals.operating / total * 100);
+  const fixedPercentage = 100 - operatingPercentage;
+  const operatingEnd = totals.operating / total * 100;
+  const rows = [
+    { name: 'Gastos operativos', amount: totals.operating, percentage: operatingPercentage, color: spendingPieColors[0] },
+    { name: 'Gastos fijos', amount: totals.fixed, percentage: fixedPercentage, color: spendingPieColors[2] },
+  ];
+  const accessibleSummary = rows.map(row => `${row.name}: ${row.percentage}%, ${money(row.amount)}`).join(', ');
+  const gradient = `${rows[0].color} 0% ${operatingEnd}%, ${rows[1].color} ${operatingEnd}% 100%`;
+
+  container.innerHTML = `<div class="spending-pie-layout"><div class="spending-pie" role="img" aria-label="Participación por tipo de gasto. ${escapeHtml(accessibleSummary)}" style="background:conic-gradient(${gradient})"><div class="spending-pie-center"><span>Total</span><strong>${money(total)}</strong></div></div><div class="spending-pie-legend">${rows.map(row => `<div class="spending-pie-legend-row expense-type-legend-row"><span class="spending-pie-dot" style="background:${row.color}"></span><span class="spending-pie-name">${row.name}</span><strong>${row.percentage}%</strong><small>${money(row.amount)}</small></div>`).join('')}</div></div>`;
 }
 
 function renderMovementTable() {
