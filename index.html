@@ -179,7 +179,7 @@
                 <form id="expenseForm">
                   <div class="form-grid">
                     <label>Fecha *<input id="expenseDate" type="date" required /></label>
-                    <label>Semana *<select id="captureWeek" required></select></label>
+                    <label>Semana *<select id="captureWeek" required disabled aria-label="Semana calculada automáticamente"></select></label>
 
                     <label>Concepto *<select id="expenseCategory" required></select></label>
                     <label>Tipo de gasto *
@@ -214,7 +214,7 @@
               <form id="bulkExpenseForm">
                 <div class="form-grid bulk-form-grid">
                   <label>Fecha *<input id="bulkExpenseDate" type="date" required /></label>
-                  <label>Semana *<select id="bulkCaptureWeek" required></select></label>
+                  <label>Semana *<select id="bulkCaptureWeek" required disabled aria-label="Semana calculada automáticamente"></select></label>
                   <label>Concepto *<select id="bulkExpenseCategory" required></select></label>
                   <label>Tipo de gasto *
                     <select id="bulkExpenseType" required disabled title="Se asigna automáticamente según el concepto seleccionado">
@@ -260,7 +260,7 @@
         </div>
         <div class="form-grid edit-expense-grid">
           <label>Fecha *<input id="editExpenseDate" type="date" required /></label>
-          <label>Semana *<select id="editExpenseWeek" required></select></label>
+          <label>Semana *<select id="editExpenseWeek" required disabled aria-label="Semana calculada automáticamente"></select></label>
           <label>Concepto *<select id="editExpenseCategory" required></select></label>
           <label>Tipo de gasto *<select id="editExpenseType" required disabled><option value="Operativo">Gasto Operativo</option><option value="Fijo">Gasto Fijo</option></select></label>
           <label>¿Quién realizó el gasto? *<select id="editExpenseSpender" required><option value="" disabled>Selecciona una persona</option><option>Alejandra</option><option>Horacio</option><option>Diego</option><option>Haytham</option><option>Mary</option></select></label>

@@ -96,6 +96,43 @@ const isoWeekRange = value => {
   const format = date => date.toISOString().slice(0, 10);
   return { start: format(monday), end: format(sunday) };
 };
+const addDaysIso = (value, days) => {
+  const date = new Date(`${value}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+const weekLabel = (start, end) => {
+  const first = new Date(`${start}T12:00:00`);
+  const last = new Date(`${end}T12:00:00`);
+  const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  if (first.getFullYear() === last.getFullYear() && first.getMonth() === last.getMonth()) {
+    return `${first.getDate()}–${last.getDate()} ${months[first.getMonth()]} ${first.getFullYear()}`;
+  }
+  return `${first.getDate()} ${months[first.getMonth()]}–${last.getDate()} ${months[last.getMonth()]} ${last.getFullYear()}`;
+};
+const ensureWeekForDate = (period, value) => {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value : localToday();
+  const existingIndex = period.weeks.findIndex(week => date >= week.start && date <= week.end);
+  if (existingIndex >= 0) return existingIndex;
+
+  const range = isoWeekRange(dateToIsoWeek(date));
+  const baseStart = period.weeks[0]?.start;
+  if (baseStart) {
+    const difference = Math.round((new Date(`${range.start}T12:00:00`) - new Date(`${baseStart}T12:00:00`)) / 604800000);
+    if (difference >= 0) {
+      for (let index = 0; index <= difference; index += 1) {
+        if (period.weeks[index]) continue;
+        const start = addDaysIso(baseStart, index * 7);
+        const end = addDaysIso(start, 6);
+        period.weeks[index] = { label: weekLabel(start, end), total: 0, start, end, generated: true };
+      }
+      return difference;
+    }
+  }
+
+  period.weeks.push({ label: weekLabel(range.start, range.end), total: 0, start: range.start, end: range.end, generated: true });
+  return period.weeks.length - 1;
+};
 const monthRange = value => {
   const monthKey = /^\d{4}-\d{2}$/.test(value || '') ? value : localToday().slice(0, 7);
   const [year, month] = monthKey.split('-').map(Number);
@@ -129,12 +166,15 @@ const orderedWeeks = period => period.weeks.map((week, index) => ({ week, index 
 });
 const getItem = id => expenseItems.find(item => item.id === id);
 const excelForSelection = () => excelEntries.filter(entry => entry.periodId === selectedPeriodId && Number(entry.weekIndex) === Number(selectedWeekIndex));
-const manualForSelection = () => state.manualEntries.filter(entry => entry.periodId === selectedPeriodId && Number(entry.weekIndex) === Number(selectedWeekIndex));
+const manualForSelection = () => {
+  const week = getWeek();
+  return state.manualEntries.filter(entry => entry.periodId === selectedPeriodId && entry.date >= week.start && entry.date <= week.end);
+};
 const weekActualTotal = (periodId, weekIndex, week) => {
   const excelRows = excelEntries.filter(entry => entry.periodId === periodId && Number(entry.weekIndex) === Number(weekIndex));
   const importedTotal = excelRows.length ? excelRows.reduce((sum, entry) => sum + Number(entry.amount || 0), 0) : Number(week.total || 0);
   const capturedTotal = state.manualEntries
-    .filter(entry => entry.periodId === periodId && Number(entry.weekIndex) === Number(weekIndex))
+    .filter(entry => entry.periodId === periodId && entry.date >= week.start && entry.date <= week.end)
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
   return importedTotal + capturedTotal;
 };
@@ -403,6 +443,9 @@ function setCaptureMode(mode) {
 
 function renderSelectors() {
   const currentPeriod = getPeriod();
+  const captureWeekIndex = ensureWeekForDate(currentPeriod, $('#expenseDate').value || localToday());
+  const bulkWeekIndex = ensureWeekForDate(currentPeriod, $('#bulkExpenseDate').value || localToday());
+  selectedWeekIndex = activeCaptureMode === 'bulk' ? bulkWeekIndex : captureWeekIndex;
   setPeriodMenuOpen(false);
   $('#periodSelectValue').textContent = currentPeriod.name;
   $('#periodSelectMenu').innerHTML = periods.map(period => `<button type="button" class="custom-option period-option ${period.id === selectedPeriodId ? 'selected' : ''}" role="option" aria-selected="${period.id === selectedPeriodId}" data-period-id="${period.id}"><span><strong>${escapeHtml(period.name)}</strong><small>${escapeHtml(periodRangeLabel(period))}</small></span><span class="period-check">${period.id === selectedPeriodId ? '✓' : ''}</span></button>`).join('');
@@ -410,6 +453,8 @@ function renderSelectors() {
   const weekOptions = ordered.map(({ week, index }) => `<option value="${index}" ${index === selectedWeekIndex ? 'selected' : ''}>${escapeHtml(week.label)} · ${money(weekActualTotal(currentPeriod.id, index, week))}</option>`).join('');
   $('#captureWeek').innerHTML = weekOptions;
   $('#bulkCaptureWeek').innerHTML = weekOptions;
+  $('#captureWeek').value = String(captureWeekIndex);
+  $('#bulkCaptureWeek').value = String(bulkWeekIndex);
 }
 
 function renderDashboard() {
@@ -550,10 +595,9 @@ function startExpenseEdit(id) {
   editingExpenseId = id;
   const period = periods.find(candidate => candidate.id === entry.periodId) || getPeriod();
   $('#editExpenseSubtitle').textContent = `${shortDate(entry.date)} · ${getItem(entry.category)?.name || entry.category}`;
-  $('#editExpenseWeek').innerHTML = period.weeks.map((week, index) => `<option value="${index}">${escapeHtml(week.label)}</option>`).join('');
   $('#editExpenseCategory').innerHTML = expenseItems.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
   $('#editExpenseDate').value = entry.date;
-  $('#editExpenseWeek').value = Number(entry.weekIndex) || 0;
+  syncEditWeekFromDate();
   $('#editExpenseCategory').value = entry.category;
   syncEditExpenseTypeFromCategory();
   setEditExpenseSpender(entry.spender);
@@ -561,6 +605,15 @@ function startExpenseEdit(id) {
   $('#editExpenseAmount').value = Number(entry.amount);
   $('#editExpenseNote').value = entry.note === 'Sin nota' ? '' : entry.note || '';
   $('#editExpenseDialog').showModal();
+}
+
+function syncEditWeekFromDate() {
+  const entry = state.manualEntries.find(candidate => candidate.id === editingExpenseId);
+  const period = periods.find(candidate => candidate.id === entry?.periodId) || getPeriod();
+  const weekIndex = ensureWeekForDate(period, $('#editExpenseDate').value || entry?.date || localToday());
+  $('#editExpenseWeek').innerHTML = orderedWeeks(period).map(({ week, index }) => `<option value="${index}">${escapeHtml(week.label)} · ${money(weekActualTotal(period.id, index, week))}</option>`).join('');
+  $('#editExpenseWeek').value = String(weekIndex);
+  return weekIndex;
 }
 
 function syncExpenseTypeFromCategory() {
@@ -703,7 +756,11 @@ function bindEvents() {
       showToast('Gasto retirado de la lista.');
     }
   });
-  $$('[data-capture-mode]').forEach(button => button.addEventListener('click', () => setCaptureMode(button.dataset.captureMode)));
+  $$('[data-capture-mode]').forEach(button => button.addEventListener('click', () => {
+    setCaptureMode(button.dataset.captureMode);
+    renderSelectors();
+    renderCapture();
+  }));
   $('#periodSelectButton').addEventListener('click', event => { event.stopPropagation(); setPeriodMenuOpen(!$('#periodSelectControl').classList.contains('open')); });
   $('#periodSelectMenu').addEventListener('click', event => {
     const option = event.target.closest('[data-period-id]');
@@ -736,15 +793,16 @@ function bindEvents() {
     applyDateFilter();
     renderDashboard();
   });
-  $('#captureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
+  $('#expenseDate').addEventListener('input', () => { renderSelectors(); renderCapture(); });
   $('#expenseCategory').addEventListener('change', syncExpenseTypeFromCategory);
   $('#expenseCancelButton').addEventListener('click', () => setView('dashboard'));
   $('#editExpenseCategory').addEventListener('change', syncEditExpenseTypeFromCategory);
+  $('#editExpenseDate').addEventListener('input', syncEditWeekFromDate);
   $('#closeEditExpense').addEventListener('click', closeExpenseEdit);
   $('#cancelEditExpense').addEventListener('click', closeExpenseEdit);
   $('#editExpenseDialog').addEventListener('click', event => { if (event.target === event.currentTarget) closeExpenseEdit(); });
   $('#editExpenseDialog').addEventListener('close', () => { editingExpenseId = ''; });
-  $('#bulkCaptureWeek').addEventListener('change', event => { selectedWeekIndex = Number(event.target.value); renderSelectors(); renderCapture(); });
+  $('#bulkExpenseDate').addEventListener('input', () => { renderSelectors(); renderCapture(); });
   $('#bulkExpenseCategory').addEventListener('change', syncBulkExpenseTypeFromCategory);
 
   $('#expenseForm').addEventListener('submit', async event => {
@@ -753,10 +811,13 @@ function bindEvents() {
     const amount = Number($('#expenseAmount').value);
     if (!amount || amount <= 0) return showToast('Escribe un monto mayor a cero.');
     const category = $('#expenseCategory').value;
+    const date = $('#expenseDate').value;
+    const weekIndex = ensureWeekForDate(getPeriod(), date);
+    selectedWeekIndex = weekIndex;
     const submitButton = event.submitter;
     const newEntry = {
       id: newExpenseId(),
-      date: $('#expenseDate').value, 
+      date,
       category,
       amount, 
       note: $('#expenseNote').value.trim() || 'Sin nota', 
@@ -764,7 +825,7 @@ function bindEvents() {
       spender: $('#expenseSpender').value.trim(), // Nuevo campo guardado
       expenseType: getItem(category)?.group === 'fixed' ? 'Fijo' : 'Operativo',
       periodId: selectedPeriodId, 
-      weekIndex: selectedWeekIndex, 
+      weekIndex,
       source: 'manual' 
     };
 
@@ -790,11 +851,13 @@ function bindEvents() {
     const amount = Number($('#editExpenseAmount').value);
     if (!amount || amount <= 0) return showToast('Escribe un monto mayor a cero.');
     const category = $('#editExpenseCategory').value;
+    const date = $('#editExpenseDate').value;
+    const editPeriod = periods.find(candidate => candidate.id === currentEntry.periodId) || getPeriod();
     const submitButton = event.submitter;
     const updatedEntry = {
       ...currentEntry,
-      date: $('#editExpenseDate').value,
-      weekIndex: Number($('#editExpenseWeek').value),
+      date,
+      weekIndex: ensureWeekForDate(editPeriod, date),
       category,
       amount,
       note: $('#editExpenseNote').value.trim() || 'Sin nota',
@@ -822,7 +885,8 @@ function bindEvents() {
     const amount = Number($('#bulkExpenseAmount').value);
     if (!amount || amount <= 0) return showToast('Escribe un monto mayor a cero.');
     const date = $('#bulkExpenseDate').value;
-    const weekIndex = Number($('#bulkCaptureWeek').value);
+    const weekIndex = ensureWeekForDate(getPeriod(), date);
+    selectedWeekIndex = weekIndex;
     const category = $('#bulkExpenseCategory').value;
     const spender = $('#bulkExpenseSpender').value.trim();
     const payment = $('#bulkExpensePayment').value;
