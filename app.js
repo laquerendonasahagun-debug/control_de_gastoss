@@ -414,7 +414,6 @@ function renderSelectors() {
 function renderDashboard() {
   const period = getPeriod();
   const weeklyRange = dashboardWeeklyRange();
-  $('#dashboardSubtitle').textContent = `${period.name} · ${period.sheet}`;
   renderDateFilter();
   $('#kpiDailySpent').textContent = money(dashboardDailyTotal());
   $('#kpiDailySpentNote').textContent = `${selectedFilterDay === localToday() ? 'Hoy' : 'Día seleccionado'} · ${shortDate(selectedFilterDay)}`;
