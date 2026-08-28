@@ -27,8 +27,8 @@ const expenseItems = [
   { id: 'comision', name: 'Comisión billipocket', group: 'operating' },
   { id: 'mantenimiento', name: 'Mantenimiento', group: 'operating' },
   { id: 'mariscos', name: 'Mariscos', group: 'operating' },
-  { id: 'comisiones', name: 'Comisiones', group: 'operating' },
-  { id: 'intereses', name: 'Intereses', group: 'operating' },
+  { id: 'comisiones', name: 'Comisiones', group: 'financial' },
+  { id: 'intereses', name: 'Intereses', group: 'financial' },
   { id: 'caja', name: 'Caja', group: 'operating' },
   { id: 'otros', name: 'Otros', group: 'operating' },
   { id: 'nomina', name: 'Nómina', group: 'fixed' },
@@ -170,6 +170,7 @@ const orderedWeeks = period => period.weeks.map((week, index) => ({ week, index 
   return String(b.week.start || '').localeCompare(String(a.week.start || ''));
 });
 const getItem = id => expenseItems.find(item => item.id === id);
+const expenseTypeForItem = item => !item ? '' : item.group === 'fixed' ? 'Fijo' : item.group === 'financial' ? 'Financiero' : 'Operativo';
 const excelForSelection = () => excelEntries.filter(entry => entry.periodId === selectedPeriodId && Number(entry.weekIndex) === Number(selectedWeekIndex));
 const manualForSelection = () => {
   const week = getWeek();
@@ -510,7 +511,7 @@ function renderSpendingPie(containerId, group = '') {
     .filter(([id, amount]) => amount > 0 && (!group || getItem(id)?.group === group))
     .sort((a, b) => b[1] - a[1]);
   if (!rows.length) {
-    const typeLabel = group === 'operating' ? 'operativos' : group === 'fixed' ? 'fijos' : '';
+    const typeLabel = group === 'operating' ? 'operativos' : group === 'fixed' ? 'fijos' : group === 'financial' ? 'financieros' : '';
     const emptyMessage = typeLabel
       ? `No hay gastos ${typeLabel} registrados en este rango.`
       : 'La gráfica aparecerá cuando registres gastos en este rango.';
@@ -539,25 +540,30 @@ function renderExpenseTypePie() {
   const breakdown = dateRangeBreakdown();
   const totals = Object.entries(breakdown || {}).reduce((result, [id, amount]) => {
     const group = getItem(id)?.group;
-    if (group === 'operating' || group === 'fixed') result[group] += Number(amount) || 0;
+    if (group === 'operating' || group === 'fixed' || group === 'financial') result[group] += Number(amount) || 0;
     return result;
-  }, { operating: 0, fixed: 0 });
-  const total = totals.operating + totals.fixed;
+  }, { operating: 0, fixed: 0, financial: 0 });
+  const total = totals.operating + totals.fixed + totals.financial;
 
   if (!total) {
     container.innerHTML = '<div class="empty-row spending-pie-empty">La gráfica aparecerá cuando registres gastos en este rango.</div>';
     return;
   }
 
-  const operatingPercentage = Math.round(totals.operating / total * 100);
-  const fixedPercentage = 100 - operatingPercentage;
-  const operatingEnd = totals.operating / total * 100;
   const rows = [
-    { name: 'Gastos operativos', amount: totals.operating, percentage: operatingPercentage, color: spendingPieColors[0] },
-    { name: 'Gastos fijos', amount: totals.fixed, percentage: fixedPercentage, color: spendingPieColors[2] },
+    { name: 'Gastos operativos', amount: totals.operating, color: spendingPieColors[0] },
+    { name: 'Gastos fijos', amount: totals.fixed, color: spendingPieColors[2] },
+    { name: 'Gastos financieros', amount: totals.financial, color: spendingPieColors[4] },
   ];
+  let accumulated = 0;
+  rows.forEach(row => {
+    row.start = accumulated / total * 100;
+    accumulated += row.amount;
+    row.end = accumulated / total * 100;
+    row.percentage = Math.round(row.amount / total * 100);
+  });
   const accessibleSummary = rows.map(row => `${row.name}: ${row.percentage}%, ${money(row.amount)}`).join(', ');
-  const gradient = `${rows[0].color} 0% ${operatingEnd}%, ${rows[1].color} ${operatingEnd}% 100%`;
+  const gradient = rows.map(row => `${row.color} ${row.start}% ${row.end}%`).join(', ');
 
   container.innerHTML = `<div class="spending-pie-layout"><div class="spending-pie" role="img" aria-label="Participación por tipo de gasto. ${escapeHtml(accessibleSummary)}" style="background:conic-gradient(${gradient})"><div class="spending-pie-center"><span>Total</span><strong>${money(total)}</strong></div></div><div class="spending-pie-legend">${rows.map(row => `<div class="spending-pie-legend-row expense-type-legend-row"><span class="spending-pie-dot" style="background:${row.color}"></span><span class="spending-pie-name">${row.name}</span><strong>${row.percentage}%</strong><small>${money(row.amount)}</small></div>`).join('')}</div></div>`;
 }
@@ -590,7 +596,7 @@ function closeExpenseEdit() {
 
 function syncEditExpenseTypeFromCategory() {
   const selectedItem = getItem($('#editExpenseCategory').value);
-  $('#editExpenseType').value = selectedItem?.group === 'fixed' ? 'Fijo' : 'Operativo';
+  $('#editExpenseType').value = expenseTypeForItem(selectedItem);
 }
 
 function setEditExpenseSpender(spender) {
@@ -629,12 +635,12 @@ function syncEditWeekFromDate() {
 
 function syncExpenseTypeFromCategory() {
   const selectedItem = getItem($('#expenseCategory').value);
-  $('#expenseType').value = selectedItem?.group === 'fixed' ? 'Fijo' : 'Operativo';
+  $('#expenseType').value = expenseTypeForItem(selectedItem);
 }
 
 function syncBulkExpenseTypeFromCategory() {
   const selectedItem = getItem($('#bulkExpenseCategory').value);
-  $('#bulkExpenseType').value = selectedItem?.group === 'fixed' ? 'Fijo' : 'Operativo';
+  $('#bulkExpenseType').value = expenseTypeForItem(selectedItem);
 }
 
 function renderExpenseCategories() {
@@ -694,13 +700,17 @@ function renderExpenses() {
   const monthlyBreakdown = monthlyBreakdownForSelection();
   const operating = expenseItems.filter(item => item.group === 'operating');
   const fixed = expenseItems.filter(item => item.group === 'fixed');
+  const financial = expenseItems.filter(item => item.group === 'financial');
   $('#operatingWeekly').textContent = money(breakdownTotal(operating, weeklyBreakdown));
   $('#fixedWeekly').textContent = money(breakdownTotal(fixed, weeklyBreakdown));
+  $('#financialWeekly').textContent = money(breakdownTotal(financial, weeklyBreakdown));
   $('#expenseGrandMonthly').textContent = money(monthlySpentForSelection());
   $('#operatingExpenseRows').innerHTML = operating.map(item => expenseRowHtml(item, todayBreakdown, weeklyBreakdown, monthlyBreakdown)).join('');
   $('#fixedExpenseRows').innerHTML = fixed.map(item => expenseRowHtml(item, todayBreakdown, weeklyBreakdown, monthlyBreakdown)).join('');
+  $('#financialExpenseRows').innerHTML = financial.map(item => expenseRowHtml(item, todayBreakdown, weeklyBreakdown, monthlyBreakdown)).join('');
   $('#operatingExpenseTotal').innerHTML = totalRowHtml(breakdownTotal(operating, todayBreakdown), breakdownTotal(operating, weeklyBreakdown), breakdownTotal(operating, monthlyBreakdown));
   $('#fixedExpenseTotal').innerHTML = totalRowHtml(breakdownTotal(fixed, todayBreakdown), breakdownTotal(fixed, weeklyBreakdown), breakdownTotal(fixed, monthlyBreakdown));
+  $('#financialExpenseTotal').innerHTML = totalRowHtml(breakdownTotal(financial, todayBreakdown), breakdownTotal(financial, weeklyBreakdown), breakdownTotal(financial, monthlyBreakdown));
 }
 
 function expenseRowHtml(item, todayBreakdown, weeklyBreakdown, monthlyBreakdown) {
@@ -849,7 +859,7 @@ function bindEvents() {
       note: $('#expenseNote').value.trim() || 'Sin nota', 
       payment: $('#expensePayment').value,
       spender: $('#expenseSpender').value.trim(), // Nuevo campo guardado
-      expenseType: getItem(category)?.group === 'fixed' ? 'Fijo' : 'Operativo',
+      expenseType: expenseTypeForItem(getItem(category)),
       periodId: selectedPeriodId, 
       weekIndex,
       source: 'manual' 
@@ -889,7 +899,7 @@ function bindEvents() {
       note: $('#editExpenseNote').value.trim() || 'Sin nota',
       payment: $('#editExpensePayment').value,
       spender: $('#editExpenseSpender').value.trim(),
-      expenseType: getItem(category)?.group === 'fixed' ? 'Fijo' : 'Operativo',
+      expenseType: expenseTypeForItem(getItem(category)),
       source: 'manual'
     };
     if (submitButton) submitButton.disabled = true;
@@ -925,7 +935,7 @@ function bindEvents() {
       note: $('#bulkExpenseNote').value.trim() || 'Sin nota',
       payment,
       spender,
-      expenseType: getItem(category)?.group === 'fixed' ? 'Fijo' : 'Operativo',
+      expenseType: expenseTypeForItem(getItem(category)),
       periodId: selectedPeriodId,
       weekIndex,
       source: 'manual',
@@ -968,7 +978,7 @@ function bindEvents() {
     const rows = [['Fecha', 'Concepto', 'Tipo de gasto', 'Quién realizó el gasto', 'Nota', 'Forma de pago', 'Monto']].concat(movementRows().map(row => [
       row.date, 
       getItem(row.category)?.name || row.category, 
-      row.expenseType || (getItem(row.category)?.group === 'fixed' ? 'Fijo' : 'Operativo'),
+      expenseTypeForItem(getItem(row.category)) || row.expenseType,
       row.spender || '—',
       row.note, 
       row.payment || 'Excel', 
