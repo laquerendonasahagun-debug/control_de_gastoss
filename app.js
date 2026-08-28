@@ -326,6 +326,10 @@ function showLogin(message = '') {
   $('#loginScreen').hidden = false;
   $('#loginError').textContent = message;
   $('#loginPassword').value = '';
+  $('#loginPassword').type = 'password';
+  $('#toggleLoginPassword').setAttribute('aria-pressed', 'false');
+  $('#toggleLoginPassword').setAttribute('aria-label', 'Mostrar contraseña');
+  $('#toggleLoginPassword').title = 'Mostrar contraseña';
   window.setTimeout(() => $('#loginUsername').focus(), 0);
 }
 
@@ -715,6 +719,15 @@ function downloadCsv(filename, rows) {
 }
 
 function bindEvents() {
+  $('#toggleLoginPassword').addEventListener('click', event => {
+    const passwordInput = $('#loginPassword');
+    const willShow = passwordInput.type === 'password';
+    passwordInput.type = willShow ? 'text' : 'password';
+    event.currentTarget.setAttribute('aria-pressed', String(willShow));
+    event.currentTarget.setAttribute('aria-label', willShow ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    event.currentTarget.title = willShow ? 'Ocultar contraseña' : 'Mostrar contraseña';
+    passwordInput.focus();
+  });
   $('#loginForm').addEventListener('submit', async event => {
     event.preventDefault();
     const submitButton = event.submitter;

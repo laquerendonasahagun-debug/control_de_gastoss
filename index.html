@@ -19,7 +19,7 @@
         <p class="login-intro">Ingresa con la cuenta asignada para continuar.</p>
         <form id="loginForm" class="login-form">
           <label>Usuario<input id="loginUsername" type="text" autocomplete="username" required /></label>
-          <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required /></label>
+          <label>Contraseña<div class="password-field"><input id="loginPassword" type="password" autocomplete="current-password" required /><button class="password-toggle" id="toggleLoginPassword" type="button" aria-label="Mostrar contraseña" aria-pressed="false" title="Mostrar contraseña"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.5"></circle><path class="eye-slash" d="m4 4 16 16"></path></svg></button></div></label>
           <p class="login-error" id="loginError" role="alert" aria-live="polite"></p>
           <button class="primary-button" type="submit">Entrar <span>→</span></button>
         </form>
