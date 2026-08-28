@@ -334,7 +334,7 @@ function applyRoleVisibility() {
   $$('[data-admin-only]').forEach(element => { element.hidden = !isAdmin; });
   $('#appShell').dataset.role = currentUser?.role || '';
   $('#sessionDisplayName').textContent = currentUser?.displayName || 'Usuario';
-  $('#sessionRole').textContent = isAdmin ? 'Acceso completo' : 'Solo captura de gastos';
+  $('#sessionRole').textContent = isAdmin ? 'Acceso completo' : 'Captura y consulta de registros';
 }
 
 async function startSession(user) {
@@ -343,10 +343,10 @@ async function startSession(user) {
   $('#loginScreen').hidden = true;
   $('#appShell').hidden = false;
   activeView = user.role === 'admin' ? 'dashboard' : 'capture';
-  databaseReady = user.role === 'employee';
+  databaseReady = false;
   renderAll();
   setView(activeView);
-  if (user.role === 'admin') await syncExpenses({ migrateLegacy: true, silent: true });
+  await syncExpenses({ migrateLegacy: user.role === 'admin', silent: true });
 }
 
 async function initializeSession() {
@@ -366,14 +366,14 @@ function setDatabaseStatus(status, label) {
 }
 
 async function syncExpenses({ migrateLegacy = true, silent = false } = {}) {
-  if (currentUser?.role !== 'admin') return;
+  if (!currentUser) return;
   if (databaseSyncing) return;
   databaseSyncing = true;
   setDatabaseStatus('syncing', 'Sincronizando…');
 
   try {
     let payload = await apiRequest();
-    if (migrateLegacy && pendingLegacyEntries.length) {
+    if (currentUser.role === 'admin' && migrateLegacy && pendingLegacyEntries.length) {
       payload = await apiRequest({ method: 'POST', body: { entries: pendingLegacyEntries } });
       pendingLegacyEntries = [];
       localStorage.removeItem(STORAGE_KEY);
@@ -560,7 +560,7 @@ function renderMovementTable() {
 
 function movementRowHtml(row, includePayment, includeSpender = includePayment, allowEdit = false) {
   const item = getItem(row.category);
-  const actions = row.source === 'manual'
+  const actions = row.source === 'manual' && currentUser?.role === 'admin'
     ? `<div class="row-actions">${allowEdit ? `<button class="edit-button" type="button" data-edit-id="${row.id}">Editar</button>` : ''}<button class="delete-button" type="button" data-delete-id="${row.id}" aria-label="Eliminar gasto">×</button></div>`
     : '';
   return `<tr><td class="date-cell">${shortDate(row.date)}</td><td><span class="tag">${escapeHtml(item?.name || row.category)}</span></td>${includeSpender ? `<td>${escapeHtml(row.spender || '—')}</td>` : ''}${includePayment ? `<td>${escapeHtml(row.payment || '—')}</td>` : ''}<td class="note-cell">${escapeHtml(row.note || 'Sin nota')}</td><td class="align-right amount-cell">${money(row.amount)}</td><td>${actions}</td></tr>`;
@@ -664,7 +664,7 @@ function renderCapture() {
   const entries = [...manualForSelection()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const count = entries.length;
   $('#newMovementCount').textContent = `${count} ${count === 1 ? 'registro' : 'registros'}`;
-  $('#newMovementRows').innerHTML = entries.length ? entries.map(row => movementRowHtml(row, true, true, true)).join('') : `<tr><td colspan="7" class="empty-row">Los gastos que guardes para esta semana aparecerán aquí.</td></tr>`;
+  $('#newMovementRows').innerHTML = entries.length ? entries.map(row => movementRowHtml(row, true, true, currentUser?.role === 'admin')).join('') : `<tr><td colspan="7" class="empty-row">Los gastos que se guarden para esta semana aparecerán aquí.</td></tr>`;
   if (!$('#expenseDate').value) $('#expenseDate').value = localToday();
   if (!$('#bulkExpenseDate').value) $('#bulkExpenseDate').value = localToday();
   renderBulkDrafts();
@@ -969,10 +969,10 @@ else mobilePeriodMedia.addListener(placePeriodControl);
 $('#expenseDate').value = localToday();
 $('#bulkExpenseDate').value = localToday();
 initializeSession();
-window.addEventListener('focus', () => { if (currentUser?.role === 'admin') syncExpenses({ migrateLegacy: false, silent: true }); });
+window.addEventListener('focus', () => { if (currentUser) syncExpenses({ migrateLegacy: false, silent: true }); });
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && currentUser?.role === 'admin') syncExpenses({ migrateLegacy: false, silent: true });
+  if (document.visibilityState === 'visible' && currentUser) syncExpenses({ migrateLegacy: false, silent: true });
 });
 window.setInterval(() => {
-  if (document.visibilityState === 'visible' && currentUser?.role === 'admin') syncExpenses({ migrateLegacy: false, silent: true });
+  if (document.visibilityState === 'visible' && currentUser) syncExpenses({ migrateLegacy: false, silent: true });
 }, 30000);

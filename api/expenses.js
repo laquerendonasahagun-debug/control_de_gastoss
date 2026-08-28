@@ -116,7 +116,7 @@ export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store, max-age=0');
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
 
-  const adminOnly = request.method === 'GET' || request.method === 'DELETE';
+  const adminOnly = request.method === 'DELETE';
   const session = requireSession(request, response, adminOnly ? ['admin'] : ['admin', 'employee']);
   if (!session) return;
 
@@ -169,9 +169,7 @@ export default async function handler(request, response) {
           )
         `));
 
-      return session.role === 'admin'
-        ? json(response, 200, { entries: await listEntries(sql) })
-        : json(response, 200, { saved: entries.length });
+      return json(response, 200, { entries: await listEntries(sql), saved: entries.length });
     }
 
     if (request.method === 'DELETE') {
