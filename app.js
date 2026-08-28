@@ -25,6 +25,10 @@ const expenseItems = [
   { id: 'vinos', name: 'Vinos y licores', group: 'operating' },
   { id: 'papeleria', name: 'Papelería', group: 'operating' },
   { id: 'comision', name: 'Comisión billipocket', group: 'operating' },
+  { id: 'mantenimiento', name: 'Mantenimiento', group: 'operating' },
+  { id: 'mariscos', name: 'Mariscos', group: 'operating' },
+  { id: 'comisiones', name: 'Comisiones', group: 'operating' },
+  { id: 'intereses', name: 'Intereses', group: 'operating' },
   { id: 'caja', name: 'Caja', group: 'operating' },
   { id: 'otros', name: 'Otros', group: 'operating' },
   { id: 'nomina', name: 'Nómina', group: 'fixed' },
@@ -32,6 +36,7 @@ const expenseItems = [
   { id: 'luz', name: 'Luz', group: 'fixed' },
   { id: 'gerencia', name: 'Gerencia', group: 'fixed' },
   { id: 'reserva', name: 'Fondo de reserva', group: 'fixed' },
+  { id: 'permisos-licencia', name: 'Permisos y licencia', group: 'fixed' },
 ];
 const expenseSpenders = ['Alejandra', 'Horacio', 'Diego', 'Haytham', 'Mary'];
 
