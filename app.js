@@ -662,6 +662,10 @@ function renderBulkDrafts() {
 
 function renderCapture() {
   renderExpenseCategories();
+  const selectedDate = $('#expenseDate').value || localToday();
+  const dailyBreakdown = snapshotBreakdown(selectedDate) || {};
+  const dailyTotal = Object.values(dailyBreakdown).reduce((sum, amount) => sum + Number(amount || 0), 0);
+  $('#captureDailySpent').textContent = money(dailyTotal);
   $('#captureWeeklySpent').textContent = money(selectedTotal());
   const entries = [...manualForSelection()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const count = entries.length;
