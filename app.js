@@ -493,7 +493,7 @@ function renderConceptBars() {
     container.innerHTML = `<div class="empty-row">No hay movimientos con desglose en el rango seleccionado.</div>`;
     return;
   }
-  const rows = Object.entries(breakdown).filter(([, amount]) => amount > 0).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const rows = Object.entries(breakdown).filter(([, amount]) => amount > 0).sort((a, b) => b[1] - a[1]);
   const max = rows[0]?.[1] || 1;
   container.innerHTML = rows.map(([id, amount]) => `<div class="concept-row"><span class="concept-name" title="${escapeHtml(getItem(id)?.name || id)}">${escapeHtml(getItem(id)?.name || id)}</span><div class="concept-track"><div class="concept-fill" style="width:${Math.max(3, (amount / max) * 100)}%"></div></div><span class="concept-amount">${money(amount)}</span></div>`).join('');
 }
