@@ -487,15 +487,15 @@ function placePeriodControl() {
 }
 
 function renderConceptBars() {
-  const breakdown = dateRangeBreakdown();
+  const breakdown = dateRangeBreakdown() || {};
   const container = $('#conceptBars');
-  if (!breakdown) {
-    container.innerHTML = `<div class="empty-row">No hay movimientos con desglose en el rango seleccionado.</div>`;
-    return;
-  }
-  const rows = Object.entries(breakdown).filter(([, amount]) => amount > 0).sort((a, b) => b[1] - a[1]);
+  const knownIds = new Set(expenseItems.map(item => item.id));
+  const rows = [
+    ...expenseItems.map(item => [item.id, Number(breakdown[item.id] || 0)]),
+    ...Object.entries(breakdown).filter(([id]) => !knownIds.has(id)).map(([id, amount]) => [id, Number(amount || 0)]),
+  ].sort((a, b) => b[1] - a[1] || String(getItem(a[0])?.name || a[0]).localeCompare(String(getItem(b[0])?.name || b[0]), 'es'));
   const max = rows[0]?.[1] || 1;
-  container.innerHTML = rows.map(([id, amount]) => `<div class="concept-row"><span class="concept-name" title="${escapeHtml(getItem(id)?.name || id)}">${escapeHtml(getItem(id)?.name || id)}</span><div class="concept-track"><div class="concept-fill" style="width:${Math.max(3, (amount / max) * 100)}%"></div></div><span class="concept-amount">${money(amount)}</span></div>`).join('');
+  container.innerHTML = rows.map(([id, amount]) => `<div class="concept-row"><span class="concept-name" title="${escapeHtml(getItem(id)?.name || id)}">${escapeHtml(getItem(id)?.name || id)}</span><div class="concept-track"><div class="concept-fill" style="width:${amount > 0 ? Math.max(3, (amount / max) * 100) : 0}%"></div></div><span class="concept-amount">${money(amount)}</span></div>`).join('');
 }
 
 function renderSpendingPie(containerId, group = '') {
