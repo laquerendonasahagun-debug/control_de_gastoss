@@ -560,8 +560,10 @@ function renderMovementTable() {
 
 function movementRowHtml(row, includePayment, includeSpender = includePayment, allowEdit = false) {
   const item = getItem(row.category);
-  const actions = row.source === 'manual' && currentUser?.role === 'admin'
-    ? `<div class="row-actions">${allowEdit ? `<button class="edit-button" type="button" data-edit-id="${row.id}">Editar</button>` : ''}<button class="delete-button" type="button" data-delete-id="${row.id}" aria-label="Eliminar gasto">×</button></div>`
+  const canEdit = allowEdit && ['admin', 'employee'].includes(currentUser?.role);
+  const canDelete = currentUser?.role === 'admin';
+  const actions = row.source === 'manual' && (canEdit || canDelete)
+    ? `<div class="row-actions">${canEdit ? `<button class="edit-button" type="button" data-edit-id="${row.id}">Editar</button>` : ''}${canDelete ? `<button class="delete-button" type="button" data-delete-id="${row.id}" aria-label="Eliminar gasto">×</button>` : ''}</div>`
     : '';
   return `<tr><td class="date-cell">${shortDate(row.date)}</td><td><span class="tag">${escapeHtml(item?.name || row.category)}</span></td>${includeSpender ? `<td>${escapeHtml(row.spender || '—')}</td>` : ''}${includePayment ? `<td>${escapeHtml(row.payment || '—')}</td>` : ''}<td class="note-cell">${escapeHtml(row.note || 'Sin nota')}</td><td class="align-right amount-cell">${money(row.amount)}</td><td>${actions}</td></tr>`;
 }
@@ -664,7 +666,7 @@ function renderCapture() {
   const entries = [...manualForSelection()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const count = entries.length;
   $('#newMovementCount').textContent = `${count} ${count === 1 ? 'registro' : 'registros'}`;
-  $('#newMovementRows').innerHTML = entries.length ? entries.map(row => movementRowHtml(row, true, true, currentUser?.role === 'admin')).join('') : `<tr><td colspan="7" class="empty-row">Los gastos que se guarden para esta semana aparecerán aquí.</td></tr>`;
+  $('#newMovementRows').innerHTML = entries.length ? entries.map(row => movementRowHtml(row, true, true, true)).join('') : `<tr><td colspan="7" class="empty-row">Los gastos que se guarden para esta semana aparecerán aquí.</td></tr>`;
   if (!$('#expenseDate').value) $('#expenseDate').value = localToday();
   if (!$('#bulkExpenseDate').value) $('#bulkExpenseDate').value = localToday();
   renderBulkDrafts();

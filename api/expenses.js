@@ -135,9 +135,9 @@ export default async function handler(request, response) {
       const rawEntries = Array.isArray(requestBody?.entries) ? requestBody.entries : [requestBody?.entry].filter(Boolean);
       if (!rawEntries.length) return json(response, 400, { error: 'No se recibieron gastos.' });
       if (rawEntries.length > MAX_BATCH_SIZE) return json(response, 400, { error: `Solo se permiten ${MAX_BATCH_SIZE} gastos por envío.` });
-      const entries = rawEntries.map(entry => normalizeEntry(entry, { forceNewId: session.role === 'employee' }));
+      const entries = rawEntries.map(entry => normalizeEntry(entry));
 
-      await sql.transaction(entries.map(entry => session.role === 'admin' ? sql`
+      await sql.transaction(entries.map(entry => sql`
           INSERT INTO tepeapulco_expenses (
             id, expense_date, category, amount, note, payment, spender,
             expense_type, period_id, week_index, source
@@ -158,15 +158,6 @@ export default async function handler(request, response) {
             week_index = EXCLUDED.week_index,
             source = EXCLUDED.source,
             updated_at = NOW()
-        ` : sql`
-          INSERT INTO tepeapulco_expenses (
-            id, expense_date, category, amount, note, payment, spender,
-            expense_type, period_id, week_index, source
-          ) VALUES (
-            ${entry.id}, ${entry.date}, ${entry.category}, ${entry.amount}, ${entry.note},
-            ${entry.payment}, ${entry.spender}, ${entry.expenseType}, ${entry.periodId},
-            ${entry.weekIndex}, ${entry.source}
-          )
         `));
 
       return json(response, 200, { entries: await listEntries(sql), saved: entries.length });
