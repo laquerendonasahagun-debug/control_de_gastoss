@@ -666,7 +666,9 @@ function renderCapture() {
   const dailyBreakdown = snapshotBreakdown(selectedDate) || {};
   const dailyTotal = Object.values(dailyBreakdown).reduce((sum, amount) => sum + Number(amount || 0), 0);
   $('#captureDailySpent').textContent = money(dailyTotal);
+  $('#captureDailySpentNote').textContent = `Día seleccionado · ${shortDate(selectedDate)}`;
   $('#captureWeeklySpent').textContent = money(selectedTotal());
+  $('#captureWeeklySpentNote').textContent = `Semana · ${dateSpanLabel(getWeek().start, getWeek().end)}`;
   const entries = [...manualForSelection()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const count = entries.length;
   $('#newMovementCount').textContent = `${count} ${count === 1 ? 'registro' : 'registros'}`;
