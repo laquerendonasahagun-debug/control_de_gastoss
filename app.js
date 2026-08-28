@@ -57,6 +57,7 @@ let databaseSyncing = false;
 let activeCaptureMode = 'single';
 let bulkDraftEntries = [];
 let editingExpenseId = '';
+let expandedConceptId = '';
 let rangeStartDate = '';
 let rangeEndDate = '';
 let activeDateFilter = 'month';
@@ -501,7 +502,19 @@ function renderConceptBars() {
     ...Object.entries(breakdown).filter(([id]) => !knownIds.has(id)).map(([id, amount]) => [id, Number(amount || 0)]),
   ].sort((a, b) => b[1] - a[1] || String(getItem(a[0])?.name || a[0]).localeCompare(String(getItem(b[0])?.name || b[0]), 'es'));
   const max = rows[0]?.[1] || 1;
-  container.innerHTML = rows.map(([id, amount]) => `<div class="concept-row"><span class="concept-name" title="${escapeHtml(getItem(id)?.name || id)}">${escapeHtml(getItem(id)?.name || id)}</span><div class="concept-track"><div class="concept-fill" style="width:${amount > 0 ? Math.max(3, (amount / max) * 100) : 0}%"></div></div><span class="concept-amount">${money(amount)}</span></div>`).join('');
+  container.innerHTML = rows.map(([id, amount]) => {
+    const name = getItem(id)?.name || id;
+    const isExpanded = expandedConceptId === id;
+    const detailId = `concept-detail-${String(id).replace(/[^a-z0-9_-]/gi, '-')}`;
+    return `<div class="concept-accordion-item"><button class="concept-row concept-row-button" type="button" data-concept-toggle="${escapeHtml(id)}" aria-expanded="${isExpanded}" aria-controls="${detailId}"><span class="concept-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span><div class="concept-track"><div class="concept-fill" style="width:${amount > 0 ? Math.max(3, (amount / max) * 100) : 0}%"></div></div><span class="concept-amount">${money(amount)} <span class="concept-toggle-icon" aria-hidden="true">⌄</span></span></button>${isExpanded ? conceptDetailHtml(id, name, detailId) : ''}</div>`;
+  }).join('');
+}
+
+function conceptDetailHtml(categoryId, categoryName, detailId) {
+  const entries = movementRows().filter(entry => entry.category === categoryId);
+  const countLabel = `${entries.length} ${entries.length === 1 ? 'movimiento' : 'movimientos'}`;
+  const rows = entries.map(entry => `<tr><td class="date-cell">${shortDate(entry.date)}</td><td><span class="tag">${escapeHtml(categoryName)}</span></td><td>${escapeHtml(entry.spender || '—')}</td><td class="note-cell">${escapeHtml(entry.note || 'Sin nota')}</td><td class="align-right amount-cell">${money(entry.amount)}</td></tr>`).join('');
+  return `<div class="concept-detail" id="${detailId}"><div class="concept-detail-heading"><div><p class="eyebrow">Detalle</p><h4>Movimientos de ${escapeHtml(categoryName)}</h4></div><span class="panel-caption">${countLabel}</span></div>${entries.length ? `<div class="table-scroll concept-detail-scroll"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Realizó el gasto</th><th>Nota</th><th class="align-right">Monto</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty-row">No hay movimientos de este concepto en el rango seleccionado.</div>'}</div>`;
 }
 
 function renderSpendingPie(containerId, group = '') {
@@ -766,6 +779,13 @@ function bindEvents() {
     showLogin('Sesión cerrada correctamente.');
   });
   document.addEventListener('click', async event => {
+    const conceptToggle = event.target.closest('[data-concept-toggle]');
+    if (conceptToggle) {
+      const conceptId = conceptToggle.dataset.conceptToggle;
+      expandedConceptId = expandedConceptId === conceptId ? '' : conceptId;
+      renderConceptBars();
+      return;
+    }
     const viewButton = event.target.closest('[data-view]');
     if (viewButton) setView(viewButton.dataset.view);
     const editButton = event.target.closest('[data-edit-id]');
