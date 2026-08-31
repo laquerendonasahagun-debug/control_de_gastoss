@@ -658,22 +658,60 @@ function syncBulkExpenseTypeFromCategory() {
 
 const normalizeConceptSearch = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 
-function syncCategoryFromSearch(searchId, selectId, syncType) {
-  const query = normalizeConceptSearch($(`#${searchId}`).value);
-  const selectedItem = expenseItems.find(item => normalizeConceptSearch(item.name) === query || normalizeConceptSearch(item.id) === query);
-  $(`#${selectId}`).value = selectedItem?.id || '';
-  syncType();
+function renderConceptSearchOptions(searchId, selectId, optionsId, query = '') {
+  const normalizedQuery = normalizeConceptSearch(query);
+  const selectedId = $(`#${selectId}`).value;
+  const matches = expenseItems.filter(item => normalizeConceptSearch(item.name).includes(normalizedQuery));
+  const options = $(`#${optionsId}`);
+  options.innerHTML = matches.length
+    ? matches.map(item => `<button class="concept-search-option${item.id === selectedId ? ' selected' : ''}" type="button" role="option" aria-selected="${item.id === selectedId}" data-concept-value="${item.id}"><strong>${escapeHtml(item.name)}</strong><small>Gasto ${expenseTypeForItem(item)}</small></button>`).join('')
+    : '<div class="concept-search-empty">No se encontraron conceptos.</div>';
+  options.hidden = false;
+  $(`#${searchId}`).setAttribute('aria-expanded', 'true');
+}
+
+function closeConceptSearch(searchId, optionsId) {
+  $(`#${optionsId}`).hidden = true;
+  $(`#${searchId}`).setAttribute('aria-expanded', 'false');
+}
+
+function bindConceptSearch(searchId, selectId, optionsId, syncType) {
+  const search = $(`#${searchId}`);
+  const select = $(`#${selectId}`);
+  const options = $(`#${optionsId}`);
+  search.addEventListener('focus', event => {
+    event.currentTarget.select();
+    renderConceptSearchOptions(searchId, selectId, optionsId);
+  });
+  search.addEventListener('click', () => {
+    if (options.hidden) renderConceptSearchOptions(searchId, selectId, optionsId);
+  });
+  search.addEventListener('input', () => {
+    select.value = '';
+    syncType();
+    renderConceptSearchOptions(searchId, selectId, optionsId, search.value);
+  });
+  search.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeConceptSearch(searchId, optionsId);
+  });
+  options.addEventListener('click', event => {
+    const option = event.target.closest('[data-concept-value]');
+    if (!option) return;
+    const item = getItem(option.dataset.conceptValue);
+    if (!item) return;
+    select.value = item.id;
+    search.value = item.name;
+    syncType();
+    closeConceptSearch(searchId, optionsId);
+  });
 }
 
 function renderExpenseCategories() {
   const selectedCategory = $('#expenseCategory').value;
   const selectedBulkCategory = $('#bulkExpenseCategory').value;
   const options = expenseItems.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
-  const suggestions = expenseItems.map(item => `<option value="${escapeHtml(item.name)}"></option>`).join('');
   $('#expenseCategory').innerHTML = options;
   $('#bulkExpenseCategory').innerHTML = options;
-  $('#expenseCategorySuggestions').innerHTML = suggestions;
-  $('#bulkExpenseCategorySuggestions').innerHTML = suggestions;
   if (expenseItems.some(item => item.id === selectedCategory)) $('#expenseCategory').value = selectedCategory;
   if (expenseItems.some(item => item.id === selectedBulkCategory)) $('#bulkExpenseCategory').value = selectedBulkCategory;
   $('#expenseCategorySearch').value = getItem($('#expenseCategory').value)?.name || '';
@@ -793,6 +831,10 @@ function bindEvents() {
     showLogin('Sesión cerrada correctamente.');
   });
   document.addEventListener('click', async event => {
+    if (!event.target.closest('.concept-search-field')) {
+      closeConceptSearch('expenseCategorySearch', 'expenseCategoryOptions');
+      closeConceptSearch('bulkExpenseCategorySearch', 'bulkExpenseCategoryOptions');
+    }
     const conceptToggle = event.target.closest('[data-concept-toggle]');
     if (conceptToggle) {
       const conceptId = conceptToggle.dataset.conceptToggle;
@@ -865,8 +907,7 @@ function bindEvents() {
   });
   $('#expenseDate').addEventListener('input', () => { renderSelectors(); renderCapture(); });
   $('#expenseCategory').addEventListener('change', syncExpenseTypeFromCategory);
-  $('#expenseCategorySearch').addEventListener('input', () => syncCategoryFromSearch('expenseCategorySearch', 'expenseCategory', syncExpenseTypeFromCategory));
-  $('#expenseCategorySearch').addEventListener('focus', event => event.currentTarget.select());
+  bindConceptSearch('expenseCategorySearch', 'expenseCategory', 'expenseCategoryOptions', syncExpenseTypeFromCategory);
   $('#expenseCancelButton').addEventListener('click', () => setView('dashboard'));
   $('#editExpenseCategory').addEventListener('change', syncEditExpenseTypeFromCategory);
   $('#editExpenseDate').addEventListener('input', syncEditWeekFromDate);
@@ -876,8 +917,7 @@ function bindEvents() {
   $('#editExpenseDialog').addEventListener('close', () => { editingExpenseId = ''; });
   $('#bulkExpenseDate').addEventListener('input', () => { renderSelectors(); renderCapture(); });
   $('#bulkExpenseCategory').addEventListener('change', syncBulkExpenseTypeFromCategory);
-  $('#bulkExpenseCategorySearch').addEventListener('input', () => syncCategoryFromSearch('bulkExpenseCategorySearch', 'bulkExpenseCategory', syncBulkExpenseTypeFromCategory));
-  $('#bulkExpenseCategorySearch').addEventListener('focus', event => event.currentTarget.select());
+  bindConceptSearch('bulkExpenseCategorySearch', 'bulkExpenseCategory', 'bulkExpenseCategoryOptions', syncBulkExpenseTypeFromCategory);
 
   $('#expenseForm').addEventListener('submit', async event => {
     event.preventDefault();
