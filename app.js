@@ -656,14 +656,28 @@ function syncBulkExpenseTypeFromCategory() {
   $('#bulkExpenseType').value = expenseTypeForItem(selectedItem);
 }
 
+const normalizeConceptSearch = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+
+function syncCategoryFromSearch(searchId, selectId, syncType) {
+  const query = normalizeConceptSearch($(`#${searchId}`).value);
+  const selectedItem = expenseItems.find(item => normalizeConceptSearch(item.name) === query || normalizeConceptSearch(item.id) === query);
+  $(`#${selectId}`).value = selectedItem?.id || '';
+  syncType();
+}
+
 function renderExpenseCategories() {
   const selectedCategory = $('#expenseCategory').value;
   const selectedBulkCategory = $('#bulkExpenseCategory').value;
   const options = expenseItems.map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join('');
+  const suggestions = expenseItems.map(item => `<option value="${escapeHtml(item.name)}"></option>`).join('');
   $('#expenseCategory').innerHTML = options;
   $('#bulkExpenseCategory').innerHTML = options;
+  $('#expenseCategorySuggestions').innerHTML = suggestions;
+  $('#bulkExpenseCategorySuggestions').innerHTML = suggestions;
   if (expenseItems.some(item => item.id === selectedCategory)) $('#expenseCategory').value = selectedCategory;
   if (expenseItems.some(item => item.id === selectedBulkCategory)) $('#bulkExpenseCategory').value = selectedBulkCategory;
+  $('#expenseCategorySearch').value = getItem($('#expenseCategory').value)?.name || '';
+  $('#bulkExpenseCategorySearch').value = getItem($('#bulkExpenseCategory').value)?.name || '';
   syncExpenseTypeFromCategory();
   syncBulkExpenseTypeFromCategory();
 }
@@ -851,6 +865,8 @@ function bindEvents() {
   });
   $('#expenseDate').addEventListener('input', () => { renderSelectors(); renderCapture(); });
   $('#expenseCategory').addEventListener('change', syncExpenseTypeFromCategory);
+  $('#expenseCategorySearch').addEventListener('input', () => syncCategoryFromSearch('expenseCategorySearch', 'expenseCategory', syncExpenseTypeFromCategory));
+  $('#expenseCategorySearch').addEventListener('focus', event => event.currentTarget.select());
   $('#expenseCancelButton').addEventListener('click', () => setView('dashboard'));
   $('#editExpenseCategory').addEventListener('change', syncEditExpenseTypeFromCategory);
   $('#editExpenseDate').addEventListener('input', syncEditWeekFromDate);
@@ -860,6 +876,8 @@ function bindEvents() {
   $('#editExpenseDialog').addEventListener('close', () => { editingExpenseId = ''; });
   $('#bulkExpenseDate').addEventListener('input', () => { renderSelectors(); renderCapture(); });
   $('#bulkExpenseCategory').addEventListener('change', syncBulkExpenseTypeFromCategory);
+  $('#bulkExpenseCategorySearch').addEventListener('input', () => syncCategoryFromSearch('bulkExpenseCategorySearch', 'bulkExpenseCategory', syncBulkExpenseTypeFromCategory));
+  $('#bulkExpenseCategorySearch').addEventListener('focus', event => event.currentTarget.select());
 
   $('#expenseForm').addEventListener('submit', async event => {
     event.preventDefault();
@@ -867,6 +885,7 @@ function bindEvents() {
     const amount = Number($('#expenseAmount').value);
     if (!amount || amount <= 0) return showToast('Escribe un monto mayor a cero.');
     const category = $('#expenseCategory').value;
+    if (!category) return showToast('Selecciona un concepto de la lista.');
     const date = $('#expenseDate').value;
     const weekIndex = ensureWeekForDate(getPeriod(), date);
     selectedWeekIndex = weekIndex;
@@ -944,6 +963,7 @@ function bindEvents() {
     const weekIndex = ensureWeekForDate(getPeriod(), date);
     selectedWeekIndex = weekIndex;
     const category = $('#bulkExpenseCategory').value;
+    if (!category) return showToast('Selecciona un concepto de la lista.');
     const spender = $('#bulkExpenseSpender').value.trim();
     const payment = $('#bulkExpensePayment').value;
 

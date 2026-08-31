@@ -181,7 +181,7 @@
                     <label>Fecha *<input id="expenseDate" type="date" required /></label>
                     <label>Semana *<select id="captureWeek" required disabled aria-label="Semana calculada automáticamente"></select></label>
 
-                    <label>Concepto *<select id="expenseCategory" required></select></label>
+                    <label>Concepto *<div class="concept-search-field"><input id="expenseCategorySearch" type="search" list="expenseCategorySuggestions" placeholder="Escribe para buscar concepto" autocomplete="off" required /><datalist id="expenseCategorySuggestions"></datalist><select id="expenseCategory" hidden aria-hidden="true" tabindex="-1"></select></div></label>
                     <label>Tipo de gasto *
                       <select id="expenseType" required disabled title="Se asigna automáticamente según el concepto seleccionado">
                         <option value="Operativo">Gasto Operativo</option>
@@ -223,7 +223,7 @@
                 <div class="form-grid bulk-form-grid">
                   <label>Fecha *<input id="bulkExpenseDate" type="date" required /></label>
                   <label>Semana *<select id="bulkCaptureWeek" required disabled aria-label="Semana calculada automáticamente"></select></label>
-                  <label>Concepto *<select id="bulkExpenseCategory" required></select></label>
+                  <label>Concepto *<div class="concept-search-field"><input id="bulkExpenseCategorySearch" type="search" list="bulkExpenseCategorySuggestions" placeholder="Escribe para buscar concepto" autocomplete="off" required /><datalist id="bulkExpenseCategorySuggestions"></datalist><select id="bulkExpenseCategory" hidden aria-hidden="true" tabindex="-1"></select></div></label>
                   <label>Tipo de gasto *
                     <select id="bulkExpenseType" required disabled title="Se asigna automáticamente según el concepto seleccionado">
                       <option value="Operativo">Gasto Operativo</option>
