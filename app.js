@@ -37,6 +37,9 @@ const expenseItems = [
   { id: 'gerencia', name: 'Gerencia', group: 'fixed' },
   { id: 'reserva', name: 'Fondo de reserva', group: 'fixed' },
   { id: 'permisos-licencia', name: 'Permisos y licencia', group: 'fixed' },
+  { id: 'combustible', name: 'Combustible', group: 'operating' },
+  { id: 'impuestos', name: 'Impuestos', group: 'fixed' },
+  { id: 'gratificaciones-bonos', name: 'Gratificaciones y bonos', group: 'fixed' },
 ];
 const expenseSpenders = ['Alejandra', 'Horacio', 'Diego', 'Haytham', 'Mary'];
 
